@@ -1,6 +1,4 @@
-import sys
 import asyncio
-import logging
 
 
 class MSGClient(object):
