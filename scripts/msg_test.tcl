@@ -6,10 +6,6 @@ set env(TESTSRV) .:6868
 
 msg_server TESTSRV
 
-msg_allow TESTSRV {
-    127.0.0.1  localhost localhost.localdomain
-}
-
 set foo 1.0
 set bar "baz"
 

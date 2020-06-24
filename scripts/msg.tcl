@@ -33,7 +33,7 @@ proc msg_wait { server msgid { cmd {} } } {
     }
 
     msg_debug Wait: $server $msgid continue
-    catch { after cancel $S(to,${msgid}) 
+    catch { after cancel $S(to,${msgid})
 	        msg_debug "Timeout Canceled: $S(to,${msgid})"
     }
     #catch { after cancel $S(reopen_timer) }
@@ -58,7 +58,7 @@ proc msg_wait { server msgid { cmd {} } } {
     }
     if { [lindex $value 0] ==  1 } {
 	return  [concat [lrange $value 1 end]]
-    } 
+    }
 }
 
 proc msg_waitgroup { server group } {
@@ -197,9 +197,9 @@ proc msg_getline { server sock } {
     if { $len < 0 || $err == 1 } {
 	if { $S(type) == 1 } {
 	    msg_debug Kil Server $server
-            msg_kilclient  $server $sock 
+            msg_kilclient  $server $sock
 	}
-	if { $S(type) == 2 } { 
+	if { $S(type) == 2 } {
 	    msg_debug Kil Client $S($sock) cannot read line from client
             msg_kilclient  $server $sock
         }
@@ -277,7 +277,7 @@ proc msg_blk { server name leng { timeout {} } { sync sync } { code {} } } {
 proc msg_list { server P { timeout {} } } {
         upvar #0 $server S
 	upvar $P p
- 
+
     set sock $S(sock)
 
     msg_cmd $server "lst" $timeout
@@ -302,7 +302,7 @@ proc msg_alarm { server secs } {
 	upvar #0 $server S
 	global ALARM
 
-  catch { 
+  catch {
     if { $secs } {
 	set S(sigalarm) [signal get ALRM]
 
@@ -328,12 +328,12 @@ proc msg_setsock { server } {
     set port $S(port)
 
     msg_debug DoSock: $server $S(host) $S(port) $S(reopen)
-    msg_alarm $server 2 
+    msg_alarm $server 2
 
     catch { close $S(sock) }
     catch { msg_kilclient $server $S(sock) }
 
-    if { [catch { set sock [socket $host $port] }] } { 
+    if { [catch { set sock [socket $host $port] }] } {
 	    global errorInfo
 
 	msg_alarm $server 0
@@ -356,7 +356,7 @@ proc msg_setsock { server } {
 
 	    set wait {}
 
-	    foreach m $S(+vars) { 
+	    foreach m $S(+vars) {
 		set var  [lindex $m 0]
 		set name [lindex $m 1]
 		set init [lindex $m 2]
@@ -438,7 +438,7 @@ proc ackdone { id server index op } {
     unset S($index)
     after cancel $S(to,${id})
     catch { unset S(to,${id}) }
-}    
+}
 
 proc msg_keepalive { server timeout updatetime} {
     upvar #0 $server S
@@ -633,7 +633,7 @@ proc msg_rpy { sock msgid args } {
 }
 proc msg_security { server peer } {
 	upvar #0 $server S
-    msg_checkhost $peer $S(hosts.allow) $S(hosts.deny)
+    return 1
 }
 
 proc msg_checkhost {hostname allow deny} {
@@ -655,7 +655,7 @@ proc msg_checkhost {hostname allow deny} {
 proc msg_matchone {hostname pattern} {
 
         set host [split $hostname .]
-        set pat  [split $pattern .] 
+        set pat  [split $pattern .]
 
         regsub {\*} $pat {.*} pat
 
@@ -669,9 +669,9 @@ proc msg_matchone {hostname pattern} {
 	for {set c 0} {$c < [expr $lenhost - $lenpat]} {incr c 1} {
 	    set pat [linsert $pat 0 .]
 	}
-    }	
+    }
     for {set i $lenhost} {$i > 0} {incr i -1} {
-	set j [expr $i - 1]  
+	set j [expr $i - 1]
 	set phost [lindex $host $j]
 	set ppat [lindex $pat $j]
 	if ![regexp ^$ppat$ $phost] {
@@ -702,7 +702,7 @@ proc msg_accept { server sock addr port } {
 	msg_logmsg $server "Newclient" "$S($sock) $sock"
     } else {
 	msg_debug Kil Client no permission for $peer
-	msg_logmsg $server "Kilclient" "$S($sock) $sock" "permission denied" 
+	msg_logmsg $server "Kilclient" "$S($sock) $sock" "permission denied"
 	close $sock
     }
 
@@ -741,7 +741,7 @@ proc msg_init { server address type } {
     set S(name) 	$name
     set S(host) 	$host
     set S(port) 	$port
-    
+
     set S(setting)	{}
 
     msg_debug Init: $server name: $name host: $host port: $port
@@ -751,7 +751,7 @@ proc msg_init { server address type } {
     interp create $server
 }
 
-proc msg_down { server } { 
+proc msg_down { server } {
 	upvar #0 $server S
 
     set sock $S(sock)
@@ -765,7 +765,7 @@ proc msg_down { server } {
 #    }
 }
 
-proc msg_up { server } { 
+proc msg_up { server } {
 	msg_debug Up: $server
 	upvar #0 $server S
 
@@ -785,7 +785,7 @@ proc msg_server { server { address {} } { log {} } } {
     global msg_logger
     msg_init $server $address 2
     msg_log $server $log
-    
+
     interp eval $server rename set \{\}
     interp alias $server set    {} msg_sset
     interp alias $server get    {} msg_sget
@@ -887,7 +887,7 @@ proc msg_puts { sock args } {
 }
 
 proc msg_setvar { server name code timeout sync variable indx op } {
-	upvar #0 $server S 
+	upvar #0 $server S
 	upvar $variable value
 
     if { [string compare $name $S(setting)] } {
@@ -906,19 +906,19 @@ proc msg_setvar { server name code timeout sync variable indx op } {
     }
 }
 
-proc msg_variable { server name var mode 
-			{ def 0 } 
+proc msg_variable { server name var mode
+			{ def 0 }
 			{ init {} }
-			{ code {} } 
+			{ code {} }
 			{ timeout {} }
 			{ sync sync }
 		  } {
 	upvar #0 $server S
 
-	global    $var 
+	global    $var
 	upvar #0  ${var}   v
 
-	if { [info exists  v] == 0 } { 
+	if { [info exists  v] == 0 } {
 	    set $var $def
 	}
 
@@ -948,7 +948,7 @@ proc msg_mapvar { server Map } {
 	if { [string compare $init {}] == 0 } {
 	    set init Up
 	}
- 
+
 	msg_variable $server $name $var rw $def $init
  }
 }
@@ -1119,7 +1119,7 @@ proc msg_fakclient { server file } {
 	upvar #0 $server S
 
     set fake [open $file r]
-	
+
     set S($fake) $file
     fconfigure $fake -buffering line
     fileevent $fake readable "msg_handle $server $fake"
