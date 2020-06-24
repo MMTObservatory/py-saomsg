@@ -5,6 +5,13 @@ Python utilities for interacting with SAO's MSG network protocol
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 
+.. image:: https://github.com/MMTObservatory/py-saomsg/workflows/Python%20Tests/badge.svg
+    :target: https://github.com/MMTObservatory/py-saomsg/actions
+    :alt: Python Tests
+
+.. image:: https://codecov.io/gh/MMTObservatory/py-saomsg/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/MMTObservatory/py-saomsg
+    :alt: Codecov Report
 
 License
 -------
