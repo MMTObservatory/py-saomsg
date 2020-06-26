@@ -13,6 +13,7 @@ class MSGClient(object):
         self.host = host
         self.port = port
         self.server_info = dict()
+        self.running = False
 
     async def open(self):
         """
@@ -25,6 +26,7 @@ class MSGClient(object):
             self.port
         )
         await self._list()
+        self.running = True
 
     async def close(self):
         """
@@ -33,6 +35,7 @@ class MSGClient(object):
         logger.debug("Closing connection")
         self.writer.close()
         await self.writer.wait_closed()
+        self.running = False
 
     async def _writemsg(self, msg):
         """
@@ -54,6 +57,9 @@ class MSGClient(object):
         Implement a MSG get to retrieve published value from the MSG server.
         If the get fails, return None.
         """
+        if not self.running:
+            errmsg = f"MSG server {self.server_info['name']} not currently connected."
+            raise ValueError(errmsg)
         if param not in self.server_info['published']:
             errmsg = f"{param} not published by MSG server {self.server_info['name']}"
             raise ValueError(errmsg)
@@ -79,6 +85,9 @@ class MSGClient(object):
         Implement running an MSG command. Only an 'ack' or a 'nak' are returned so
         check that to see if command was succesful. Return True or False accordingly.
         """
+        if not self.running:
+            errmsg = f"MSG server {self.server_info['name']} not currently connected."
+            raise ValueError(errmsg)
         if command not in self.server_info['registered']:
             errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
             raise ValueError(errmsg)
