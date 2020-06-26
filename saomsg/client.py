@@ -25,8 +25,8 @@ class MSGClient(object):
             self.host,
             self.port
         )
-        await self._list()
         self.running = True
+        await self._list()
 
     async def close(self):
         """
@@ -58,7 +58,7 @@ class MSGClient(object):
         If the get fails, return None.
         """
         if not self.running:
-            errmsg = f"MSG server {self.server_info['name']} not currently connected."
+            errmsg = f"MSG server not currently connected."
             raise ValueError(errmsg)
         if param not in self.server_info['published']:
             errmsg = f"{param} not published by MSG server {self.server_info['name']}"
@@ -86,7 +86,7 @@ class MSGClient(object):
         check that to see if command was succesful. Return True or False accordingly.
         """
         if not self.running:
-            errmsg = f"MSG server {self.server_info['name']} not currently connected."
+            errmsg = f"MSG server not currently connected."
             raise ValueError(errmsg)
         if command not in self.server_info['registered']:
             errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
@@ -107,22 +107,26 @@ class MSGClient(object):
         Implement the MSG lst command and use it to populate self.server_info
         """
         msg = "1 lst\n"
-        data = await self._writemsg(msg)
-        if int(data[0]) == 1 and data[1] == "ack":
-            logger.debug("Successfully sent 'lst' command")
-            self.server_info['published'] = list()
-            self.server_info['registered'] = list()
-            while True:
-                rawdata = await self.reader.readline()
-                line = rawdata.decode()
-                if "----LIST----" in line:
-                    logger.debug("Done processing lst output.")
-                    break
-                if 'server' in line:
-                    self.server_info['name'] = line.split()[1]
-                if 'published' in line:
-                    var = line.split()[1]
-                    self.server_info['published'].append(var)
-                if 'registered' in line:
-                    var = line.split()[1]
-                    self.server_info['registered'].append(var)
+        if self.running:
+            data = await self._writemsg(msg)
+            if int(data[0]) == 1 and data[1] == "ack":
+                logger.debug("Successfully sent 'lst' command")
+                self.server_info['published'] = list()
+                self.server_info['registered'] = list()
+                while True:
+                    rawdata = await self.reader.readline()
+                    line = rawdata.decode()
+                    if "----LIST----" in line:
+                        logger.debug("Done processing lst output.")
+                        break
+                    if 'server' in line:
+                        self.server_info['name'] = line.split()[1]
+                    if 'published' in line:
+                        var = line.split()[1]
+                        self.server_info['published'].append(var)
+                    if 'registered' in line:
+                        var = line.split()[1]
+                        self.server_info['registered'].append(var)
+        else:
+            errmsg = f"MSG server not currently connected."
+            raise ValueError(errmsg)
