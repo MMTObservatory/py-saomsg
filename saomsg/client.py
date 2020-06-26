@@ -58,7 +58,7 @@ class MSGClient(object):
         If the get fails, return None.
         """
         if not self.running:
-            errmsg = f"MSG server not currently connected."
+            errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
         if param not in self.server_info['published']:
             errmsg = f"{param} not published by MSG server {self.server_info['name']}"
@@ -86,7 +86,7 @@ class MSGClient(object):
         check that to see if command was succesful. Return True or False accordingly.
         """
         if not self.running:
-            errmsg = f"MSG server not currently connected."
+            errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
         if command not in self.server_info['registered']:
             errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
@@ -128,5 +128,5 @@ class MSGClient(object):
                         var = line.split()[1]
                         self.server_info['registered'].append(var)
         else:
-            errmsg = f"MSG server not currently connected."
+            errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
