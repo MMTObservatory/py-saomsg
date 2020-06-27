@@ -91,8 +91,12 @@ class MSGClient(object):
         if command not in self.server_info['registered']:
             errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
             raise ValueError(errmsg)
-        params = " ".join(str(x) for x in pars)
-        msg = f"1 {command} {params}\n"
+        if len(pars) > 0:
+            params = " ".join(str(x) for x in pars)
+            msg = f"1 {command} {params}\n"
+        else:
+            params = "<None>"
+            msg = f"1 {command}\n"
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
             value = True

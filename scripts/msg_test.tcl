@@ -23,5 +23,10 @@ proc TESTSRV.multiply { s sock msgid cmd x y } {
     msg_ack $sock $msgid
 }
 
+msg_register TESTSRV blurb
+proc TESTSRV.blurb { s sock msgid cmd } {
+    msg_ack $sock $msgid
+}
+
 msg_up TESTSRV
 vwait forever

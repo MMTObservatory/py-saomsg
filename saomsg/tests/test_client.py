@@ -28,9 +28,12 @@ async def test_get():
 async def test_cmd():
     c = MSGClient()
     await c.open()
-    await c.run("multiply", 4, 5)
+    status = await c.run("multiply", 4, 5)
+    assert(status)
     foo = await c.get("foo")
     assert(int(foo) == 20)
+    status = await c.run("blurb")
+    assert(status)
     await c.close()
 
 
