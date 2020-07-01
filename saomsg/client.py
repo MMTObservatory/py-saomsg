@@ -21,20 +21,30 @@ class MSGClient(object):
         Run lst after opening to populate self.server_info.
         """
         logger.debug("Opening connection")
-        self.reader, self.writer = await asyncio.open_connection(
-            self.host,
-            self.port
-        )
+        try:
+            self.reader, self.writer = await asyncio.open_connection(
+                self.host,
+                self.port
+            )
+        except Exception as e:
+            msg = f"Error connecting to MSG server at {self.host}:{self.port}: {e}"
+            logger.error(msg)
+            self.running = False
+            return False
         self.running = True
         await self._list()
+        return True
 
     async def close(self):
         """
         Closes the connection to the MSG server
         """
-        logger.debug("Closing connection")
-        self.writer.close()
-        await self.writer.wait_closed()
+        if not self.running:
+            logger.warn("Connection already closed")
+        else:
+            logger.debug("Closing connection")
+            self.writer.close()
+            await self.writer.wait_closed()
         self.running = False
 
     async def _writemsg(self, msg):
