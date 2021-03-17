@@ -9,7 +9,7 @@ Python utilities for interacting with SAO's MSG network protocol
     :target: https://github.com/MMTObservatory/py-saomsg/actions
     :alt: Python Tests
 
-.. image:: https://codecov.io/gh/MMTObservatory/py-saomsg/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/MMTObservatory/py-saomsg/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/MMTObservatory/py-saomsg
     :alt: Codecov Report
 
