@@ -3,6 +3,10 @@ import time
 import inspect
 from dataclasses import dataclass
 import typing
+import logging
+
+logger = logging.getLogger("")
+logger.setLevel(logging.DEBUG)
 
 @dataclass
 class MSG:
@@ -62,26 +66,39 @@ class MSGClient(object):
         self.host = host
         self.port = port
         self.server_info = dict()
+        self.running = False
 
     async def open(self):
         """
         Opens the connection to the MSG server as a pair of asyncio streams.
         Run lst after opening to populate self.server_info.
         """
-        print("Opening connection")
-        self.reader, self.writer = await asyncio.open_connection(
-            self.host,
-            self.port
-        )
+        logger.debug("Opening connection")
+        try:
+            self.reader, self.writer = await asyncio.open_connection(
+                self.host,
+                self.port
+            )
+        except Exception as e:
+            msg = f"Error connecting to MSG server at {self.host}:{self.port}: {e}"
+            logger.error(msg)
+            self.running = False
+            return False
+        self.running = True
         await self._list()
+        return True
 
     async def close(self):
         """
         Closes the connection to the MSG server
         """
-        print("Closing connection")
-        self.writer.close()
-        await self.writer.wait_closed()
+        if not self.running:
+            logger.warn("Connection already closed")
+        else:
+            logger.debug("Closing connection")
+            self.writer.close()
+            await self.writer.wait_closed()
+        self.running = False
 
     async def _writemsg(self, msg):
         """
@@ -94,7 +111,7 @@ class MSGClient(object):
         await self.writer.drain()
 
         rawdata = await self.reader.readline()
-        print(f'Received: {rawdata.decode()!r}')
+        logger.debug(f'Received: {rawdata.decode()!r}')
         data = rawdata.decode().split()
         return data
 
@@ -103,16 +120,26 @@ class MSGClient(object):
         Implement a MSG get to retrieve published value from the MSG server.
         If the get fails, return None.
         """
+        if not self.running:
+            errmsg = "MSG server not currently connected."
+            raise ValueError(errmsg)
         if param not in self.server_info['published']:
             errmsg = f"{param} not published by MSG server {self.server_info['name']}"
             raise ValueError(errmsg)
         msg = f"1 get {param}\n"
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
-            value = data[2]
-            print(f"Got {param} = {value}")
+            if len(data) == 2:
+                logger.debug(f"Returned empty result for {param}")
+                value = None
+            if len(data) == 3:
+                value = data[2]
+                logger.debug(f"Got {param} = {value}")
+            else:
+                value = " ".join(data[2:])
+                logger.debug(f"Got {param} = {value}")
         else:
-            print(f"Failed to get {param} from MSG server")
+            logger.debug(f"Failed to get {param} from MSG server")
             value = None
         return value
 
@@ -121,19 +148,26 @@ class MSGClient(object):
         Implement running an MSG command. Only an 'ack' or a 'nak' are returned so
         check that to see if command was succesful. Return True or False accordingly.
         """
+        if not self.running:
+            errmsg = "MSG server not currently connected."
+            raise ValueError(errmsg)
         if command not in self.server_info['registered']:
             errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
             raise ValueError(errmsg)
-        params = " ".join(str(x) for x in pars)
-        msg = f"1 {command} {params}\n"
+        if len(pars) > 0:
+            params = " ".join(str(x) for x in pars)
+            msg = f"1 {command} {params}\n"
+        else:
+            params = "<None>"
+            msg = f"1 {command}\n"
         data = await self._writemsg(msg)
         print(data)
 
         if int(data[0]) == 1 and data[1] == "ack":
             value = True
-            print(f"Successfully ran {command} with params {params}")
+            logger.debug(f"Successfully ran {command} with params {params}")
         else:
-            print(f"Failed to run {command} with params {params} on MSG server")
+            logger.debug(f"Failed to run {command} with params {params} on MSG server")
             value = False
         return value
 
@@ -143,6 +177,7 @@ class MSGClient(object):
         Implement the MSG lst command and use it to populate self.server_info
         """
         msg = "1 lst\n"
+<<<<<<< HEAD
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
             print("Successfully sent 'lst' command")
@@ -383,6 +418,4 @@ class SubscriberSingleton:
 
         return cls.clients[(host, port)]
 
-async def pp(val):
-    await asyncio.sleep(0.9)
-    print(val)
+
