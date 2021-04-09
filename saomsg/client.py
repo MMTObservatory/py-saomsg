@@ -177,7 +177,6 @@ class MSGClient(object):
         Implement the MSG lst command and use it to populate self.server_info
         """
         msg = "1 lst\n"
-<<<<<<< HEAD
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
             print("Successfully sent 'lst' command")
