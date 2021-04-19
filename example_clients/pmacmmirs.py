@@ -8,7 +8,7 @@ import time
 import datetime
 import pickle
 import os
-
+from collections import OrderedDict
 
 from saomsg.client import Subscriber
 
@@ -54,6 +54,97 @@ async def main(wheel, goto):
     await pows.stop()
     await tsk1
     await tsk2
+
+
+
+
+async def goto(wheel, Filter):
+
+    pmac = Subscriber(host="fields", port=10100)
+    await pmac.open()
+
+
+    tsk1 = asyncio.create_task( pmac.mainloop() )
+    wheels = OrderedDict(
+            filter1Wheel =\
+                [
+                    "Y",
+                    "J", 
+                    "Kspec", 
+                    "K", 
+                    "H", 
+                    "open"
+                    ],
+            filter2Wheel=\
+                [
+                    "HK3",
+                    "open",
+                    "dark", 
+                    "HK", 
+                    "zJ"
+                    ],
+            grismWheel=\
+                [
+                    "H3000", 
+                    "H", 
+                    "HK", 
+                    "J", 
+                    "K3000", 
+                    "open",
+                    ]
+            )
+
+    gettables = [
+#            "Pos",
+#            "HLimBit",
+#            "MLimBit",
+            "DetentAwayLimA",
+            "DetentAwayLimB",
+            "DetentAwayLimA",
+            "DetentAwayLimB",
+            "DetentNearLimA",
+            "DetentNearLimB",
+            "DetentNearLimA",
+            "DetentNearLimB",
+            "SwitchHistAway",
+            "SwitchHistNear",
+            "DetentTolA",
+            "DetentTolB",
+            "DetentTol"
+            ]
+
+
+    rows = []
+    print("starting")
+    print("Stopping")
+    #for wheel, optic in wheels.items():
+    for a in [1]:
+        
+        row = []
+        print(wheel)
+        await pmac.run(wheel, Filter)
+        for param_name in gettables:
+            print(f"{wheel}{param_name}")
+            value = await pmac.get(f"{wheel}{param_name}")
+            print(f"{param_name}\t {value[0]}")
+            row.append(value[0])
+        row+=[wheel, Filter]
+        rows.append(row)
+
+        break 
+    print(gettables+[wheel])
+    print(rows)
+    await pmac.stop()
+
+    return pd.DataFrame(
+            rows, 
+            columns=gettables+['wheel', 'filter'],
+            index=[int(time.time())])
+
+
+
+       
+
 
 
 

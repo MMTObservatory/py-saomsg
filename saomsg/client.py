@@ -161,7 +161,6 @@ class MSGClient(object):
             params = "<None>"
             msg = f"1 {command}\n"
         data = await self._writemsg(msg)
-        print(data)
 
         if int(data[0]) == 1 and data[1] == "ack":
             value = True
@@ -179,14 +178,14 @@ class MSGClient(object):
         msg = "1 lst\n"
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
-            print("Successfully sent 'lst' command")
+            #print("Successfully sent 'lst' command")
             self.server_info['published'] = list()
             self.server_info['registered'] = list()
             while True:
                 rawdata = await self.reader.readline()
                 line = rawdata.decode()
                 if "----LIST----" in line:
-                    print("Done processing lst output.")
+                    #print("Done processing lst output.")
                     break
                 if 'server' in line:
                     self.server_info['name'] = line.split()[1]
@@ -368,7 +367,7 @@ class Subscriber(MSGClient):
 
         self.writer.write(msg.encode())
         await self.writer.drain()
-        print("getting")
+
         if timeout:
             resp = await asyncio.wait_for( aq.get(), timeout)
         else:
