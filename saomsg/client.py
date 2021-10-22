@@ -8,6 +8,12 @@ import logging
 logger = logging.getLogger("")
 logger.setLevel(logging.DEBUG)
 
+
+# Give some structure to the 
+# MSG string responses. This 
+# might be overengineering but 
+# I hope it will provide some 
+# clarity. 
 @dataclass
 class MSG:
        msgid: typing.Union[int, None]
@@ -203,6 +209,15 @@ class MSGClient(object):
 # Subscriber class
 
 class Subscriber(MSGClient):
+    """
+    This class expands on the MSGClient class by allowing 
+    for more asynchronous communication. This is done by
+    having a run-forever loop that reads from the MSG 
+    server. All get or subscribe queries are given 
+    a msgid. The read loop then matches ACKs with 
+    the msgid and sends the response to the appropriate 
+    asyncio queue. 
+    """
 
     MAXID = 100000
 
@@ -281,7 +296,7 @@ class Subscriber(MSGClient):
                 continue
 
             except Exception as error:
-                print(f"We have a read error: {[error]}")
+                logger.warn(f"We have a read error: {[error]}")
                 raise error
 
 
@@ -299,7 +314,7 @@ class Subscriber(MSGClient):
             acknak = msg_factory(data)
 
 
-        
+            # SET is used for subscribed parameters. 
             if type(acknak) is SET:
                 self.server_info['subscribed'][acknak.param] = " ".join(acknak.value)
 
@@ -314,6 +329,8 @@ class Subscriber(MSGClient):
                     else:
                         loop.call_soon(cb, acknak.values)
 
+            # Other msg reads should be from run commands or gets.
+            # Check to see if anyone is waiting for a reply.
             elif acknak.msgid in self.outstanding_replies:
                 aq =  self.outstanding_replies[acknak.msgid]
                 if type(acknak) is ACK:
@@ -329,7 +346,7 @@ class Subscriber(MSGClient):
 
 
             else:
-                print(f"gracefully ignoring {acknak}")
+                logger.warn(f"gracefully ignoring {acknak}")
 
 
 
@@ -345,7 +362,7 @@ class Subscriber(MSGClient):
     async def run(self, command, *pars, timeout=None):
         """
         Implement running an MSG command. Only an 'ack' or a 'nak' are returned so
-        check that to see if command was succesful. Return True or False accordingly.
+        check that to see if command was successful. Return True or False accordingly.
         """
         
         if type(timeout) not in (float, int):
@@ -403,7 +420,7 @@ class Subscriber(MSGClient):
 
 class SubscriberSingleton:
 
-    """For most uses we probably will only ever need on
+    """For most uses we probably will only ever need one
     instance of a client per msg server. This will 
     instantiate a Subscriber if none exist for 
     that host and port"""
