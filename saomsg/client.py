@@ -287,12 +287,13 @@ class Subscriber(MSGClient):
         starttime = time.time()
         rawdata = b''
         while self.running:
-
+            logging.debug("reading data")
             try:
                 rawdata+= await asyncio.wait_for(self.reader.read(1), 5.0)
             
             except asyncio.TimeoutError as TO:
                 # Give us a chance to check the loop. 
+                logging.debug(f"timeout")
                 continue
 
             except Exception as error:
@@ -302,16 +303,16 @@ class Subscriber(MSGClient):
 
             data=rawdata.decode()
 
-
             if rawdata.endswith(b'\n'):
                 rawdata = b""
             else:
                 continue
             
+            logging.debug(f"raw data is {data}")
             self.last_data = data
             vals = data.split()
-        
             acknak = msg_factory(data)
+            
 
 
             # SET is used for subscribed parameters. 
@@ -327,7 +328,7 @@ class Subscriber(MSGClient):
                         self.tasks.append(task)
 
                     else:
-                        loop.call_soon(cb, acknak.values)
+                        loop.call_soon(cb, acknak.value)
 
             # Other msg reads should be from run commands or gets.
             # Check to see if anyone is waiting for a reply.
