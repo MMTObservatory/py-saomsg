@@ -5,8 +5,6 @@ from dataclasses import dataclass
 import typing
 import logging
 
-logger = logging.getLogger("")
-logger.setLevel(logging.DEBUG)
 
 
 # Give some structure to the 
@@ -34,6 +32,10 @@ class NAK(MSG):
 
 
 def msg_factory(data:str):
+    """
+    Best guess as to what type of
+    msg response we are receiving.
+    """
     vals = data.split()
 
     if vals[0].isnumeric():
@@ -72,6 +74,7 @@ class MSGClient(object):
         self.host = host
         self.port = port
         self.server_info = dict()
+        
         self.running = False
 
     async def open(self):
@@ -79,7 +82,7 @@ class MSGClient(object):
         Opens the connection to the MSG server as a pair of asyncio streams.
         Run lst after opening to populate self.server_info.
         """
-        logger.debug("Opening connection")
+        logging.debug("Opening connection")
         try:
             self.reader, self.writer = await asyncio.open_connection(
                 self.host,
@@ -87,7 +90,7 @@ class MSGClient(object):
             )
         except Exception as e:
             msg = f"Error connecting to MSG server at {self.host}:{self.port}: {e}"
-            logger.error(msg)
+            logging.error(msg)
             self.running = False
             return False
         self.running = True
@@ -99,9 +102,9 @@ class MSGClient(object):
         Closes the connection to the MSG server
         """
         if not self.running:
-            logger.warn("Connection already closed")
+            logging.warn("Connection already closed")
         else:
-            logger.debug("Closing connection")
+            logging.debug("Closing connection")
             self.writer.close()
             await self.writer.wait_closed()
         self.running = False
@@ -117,7 +120,7 @@ class MSGClient(object):
         await self.writer.drain()
 
         rawdata = await self.reader.readline()
-        logger.debug(f'Received: {rawdata.decode()!r}')
+        logging.debug(f'Received: {rawdata.decode()!r}')
         data = rawdata.decode().split()
         return data
 
@@ -136,16 +139,16 @@ class MSGClient(object):
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
             if len(data) == 2:
-                logger.debug(f"Returned empty result for {param}")
+                logging.debug(f"Returned empty result for {param}")
                 value = None
             if len(data) == 3:
                 value = data[2]
-                logger.debug(f"Got {param} = {value}")
+                logging.debug(f"Got {param} = {value}")
             else:
                 value = " ".join(data[2:])
-                logger.debug(f"Got {param} = {value}")
+                logging.debug(f"Got {param} = {value}")
         else:
-            logger.debug(f"Failed to get {param} from MSG server")
+            logging.debug(f"Failed to get {param} from MSG server")
             value = None
         return value
 
@@ -170,9 +173,9 @@ class MSGClient(object):
 
         if int(data[0]) == 1 and data[1] == "ack":
             value = True
-            logger.debug(f"Successfully ran {command} with params {params}")
+            logging.debug(f"Successfully ran {command} with params {params}")
         else:
-            logger.debug(f"Failed to run {command} with params {params} on MSG server")
+            logging.debug(f"Failed to run {command} with params {params} on MSG server")
             value = False
         return value
 
@@ -297,7 +300,7 @@ class Subscriber(MSGClient):
                 continue
 
             except Exception as error:
-                logger.warn(f"We have a read error: {[error]}")
+                logging.warn(f"We have a read error: {[error]}")
                 raise error
 
 
@@ -318,11 +321,13 @@ class Subscriber(MSGClient):
             # SET is used for subscribed parameters. 
             if type(acknak) is SET:
                 self.server_info['subscribed'][acknak.param] = " ".join(acknak.value)
+                logging.debug(f"We have a subscribed acknack {acknak.param}")
 
                 if acknak.param in self.callbacks:
                     cb = self.callbacks[acknak.param]
                     loop = asyncio.get_running_loop()
                     
+                    logging.debug(f"Calling {cb.__name__} ({cb.__doc__}) with {acknak.param} value {acknak.value}")
                     if inspect.iscoroutinefunction( cb ):
                         task = loop.create_task(cb(*acknak.value))
                         self.tasks.append(task)
@@ -347,7 +352,7 @@ class Subscriber(MSGClient):
 
 
             else:
-                logger.warn(f"gracefully ignoring {acknak}")
+                logging.warn(f"gracefully ignoring {acknak}")
 
 
 
