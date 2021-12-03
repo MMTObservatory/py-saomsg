@@ -11,7 +11,18 @@ import os
 
 
 class WAVESERV(msg_device):
+    """
+    The msg to indi converter for the WFS/F5.
+    
+    """
 
+    ####################################
+    #INDI Vector property definitions
+    #
+    # This set of methods define INDI 
+    # Properties for the attributes of 
+    # the waveserv msg server.
+    # 
     def power_switches(self):
         """
         Define the INDI swithes related to power.
@@ -88,7 +99,7 @@ class WAVESERV(msg_device):
                     label=k,
                     name=k,
                     state="Idle",
-                    perm="ro",
+                    perm="rw",
                     group="Registered Fxns"
                 ),
                 [
@@ -207,6 +218,10 @@ class WAVESERV(msg_device):
 
 
     def axis_details(self):
+        """
+        Define other INDI vector properties related
+        to the axes. 
+        """
 
         axis_map = dict(
             mirror=('m', 1),
@@ -322,10 +337,22 @@ class WAVESERV(msg_device):
                 props2.append(prop)
             vec = self.vectorFactory("Number", vec_att2, props2)
             self.IDDef(vec)
+    #END Vector Property definitions
+    ##################################
+    
 
-            
+    ################################
+    #MSG subscription handlers
+    # thses methods are called when the
+    # listed MSG variables are sent from the
+    # MSG server. They usually update an INDI 
+    # Vector property
     @MSG.subscribe("p70","p71","p72","p73","p74","p75")
     def on_special_pos_change(self, item, value):
+        """
+        Called when we get a new message for any of the 
+        special positions. Updates the indi vector accordingly. 
+        """
         vec = self.IUFind("special_positions")
         vec[item].value = float(value[0])
         self.IDSet(vec)
@@ -604,8 +631,8 @@ class WAVESERV(msg_device):
         temps[item].value = float(value[0])
         self.IDSet(temps)
 
-    
-       
+    #END MSG subscription handlers
+    #########################################
 
 async def main():    
     hostport = os.environ.get("INDICONFIG", )

@@ -34,7 +34,7 @@ if INDI_LOG_PATH:
 class wrapper:
     """This class contains the method wrapper que.
     when a msg_device method is decorated with a
-    classmethod defined here, the method is sent
+    classmethod, defined here, the method is sent
     to a que for processing by the msg_device
     """
 
@@ -196,6 +196,13 @@ class msg_device(device):
 
     
     async def startstop(self):
+        """
+        This funtion is a bridge between the sync connect
+        button and the async event loop. Here we wait for a 
+        the start variable from the startstop_que. If we 
+        are starting we build the properties and run the 
+        mainloop as a task. 
+        """
         while True:
             start = await self.startstop_que.get()
                     
@@ -223,12 +230,20 @@ class msg_device(device):
     
 
     async def asyncInitProperties(self, device=None):
+        """
+        Call build properties when we get a getProperties 
+        INDI tag. 
+        """
         self.IDMessage("called async init")
         if self.msg_client.running:
             await self.buildProperties()
 
 
     async def do_the_getting(self):
+        """
+        Handle the MSG Get requests and
+        updates the corresponding indi property
+        """
         while self.running:
             msg_name = await self.msgget_que.get()
             
@@ -251,7 +266,11 @@ class msg_device(device):
 
 
     async def astart(self):
-        """Start up in async mode"""
+        """Start up in async mode
+        This is a kind of highjacking of the 
+        pyindi astart method so we can add some
+        tasks to the gather function. 
+        """
 
         self.mainloop = asyncio.get_running_loop()
         self.reader, self.writer = await stdio()
@@ -267,6 +286,12 @@ class msg_device(device):
         await future
  
     def whats_changed(self, name, values, names, device=None):
+        """
+        A convienience method to let you know which values
+        changed when you get an incoming INDI property
+        for any of the ISNew* methods or anything decorated
+        with device.NewVectorProperty
+        """
         vec = self.IUFind(name, device=device)
         changed = {}
         for val, name in zip(values, names):
@@ -278,6 +303,12 @@ class msg_device(device):
 
     @device.NewVectorProperty("CONNECTION")
     def connect(self, device, name, states, names):
+        """
+        The pyINDI way of connecting to a device. In this 
+        case we are not actually connecting to a peice of
+        hardware, we are connecting to the MSG server. 
+
+        """
         vec, change = self.whats_changed(
                 name, 
                 states, 
@@ -463,66 +494,6 @@ class msg_device(device):
             return fxn
 
         return handle_fxn
-
-#    async def repeat_queuer(self):
-#        while self.running:
-#            func = await self.repeat_q.get()
-#            if self.started > 0:
-#                self.started-=1
-#            elif self.started == 0:
-#                self.IDMessage("SUBSCRIBING")
-#                self.msg_client.subscribe("vTemp", self.show)
-#                
-#            print(f"calling func")
-#            try:
-#                if inspect.iscoroutinefunction(func):
-#                    await func(self)
-#                else:
-#                    func(self)
-#
-#            except Exception as error:
-#                sys.stderr.write(
-#                    f"There was an exception the \
-#                    later decorated fxn {func}:")
-#
-#                sys.stderr.write(f"{error}")
-#                sys.stderr.write("See traceback below.")
-#                traceback.print_exc(file=sys.stderr)
-
-
-
-        
-
-#class PMAC(device):
-#
-#        
-#
-#    def ISGetProperties(self, *args):
-#        print("getProperties")
-#        #pmac = saomsg.Subscriber('localhost', 10100)
-#
-#    async def qwatch(self):
-#        while 1:
-#            data=await self.q.get()
-#            print(data)
-#
-#    @device.repeat(1000)
-#    def repeater(self):
-#
-#        print('sync repeat')
-#
-#    @device.repeat(1500)
-#    async def foobar(self):
-#        """FOOBAR docstring"""
-#        await asyncio.sleep(0.1)
-#        print('async repeat')
-
-
-
-
-
-
-	
 
 
 
