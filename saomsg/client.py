@@ -233,7 +233,7 @@ class Subscriber(MSGClient):
 
     def subscribe(self, param, callback=None):
 
-        """Subscribe to a msg variable with optional callback the
+        """Subscribe to a msg variable with optional callback. The
         callback should be a coroutine that excepts the value of
         the variable as its only argument. The Callback should not
         be CPU intensive or we will bog down the mainloop. If we
@@ -265,12 +265,12 @@ class Subscriber(MSGClient):
     async def mainloop(self, timeout=None):
         """ Read and handle data from msg server.
         """
-        
+
         if not self.running:
             raise RuntimeError("Must call open() before mainloop()")
 
         rawdata = b''
-        
+
         while self.running:
             logging.debug("reading data")
             try:
@@ -332,13 +332,12 @@ class Subscriber(MSGClient):
 
             else:
                 # TODO
-                # When you subscribe to a variable the server 
+                # When you subscribe to a variable the server
                 # Imediately responds with an ack and the inital value.
                 # We currently Don't have a means of capturing this
                 # value so it is gracefully ignored. We need to
                 # find a way to capture it and apply the callback.
                 logging.warn(f"gracefully ignoring {acknak}")
-
 
     async def stop(self):
         self.running = False
