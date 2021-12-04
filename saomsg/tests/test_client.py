@@ -81,7 +81,6 @@ async def test_bogosity():
     await c.close()
 
 
-
 @pytest.mark.asyncio
 async def test_noconnection():
     cc = MSGClient(host="localhost", port=6869)

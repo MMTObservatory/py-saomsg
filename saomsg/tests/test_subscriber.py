@@ -11,13 +11,13 @@ async def test_client():
     assert(c.server_info['name'] == "TESTSRV")
     await c.close()
 
+
 @pytest.mark.asyncio
 async def test_mainloop():
     c = Subscriber()
     await c.open()
     mtask = asyncio.create_task(c.mainloop())
     assert(c.server_info['name'] == "TESTSRV")
-
 
     bar = await c.get("bar")
     assert(bar[0] == "baz")
@@ -26,9 +26,10 @@ async def test_mainloop():
     assert(long_str == ["there", "once", "was", "a", "man"])
 
     q = asyncio.Queue()
-    def callback( value):
+
+    def callback(value):
         q.put_nowait(value)
-    
+
     c.subscribe("foo", callback)
     await c.run("multiply", "4", "5")
     subscribed_value = await q.get()
@@ -45,6 +46,3 @@ async def test_mainloop():
     # mainloop task.
     await asyncio.sleep(1.0)
     assert (mtask.done())
-
-
-
