@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 from saomsg.msgtoindi import msg_device
 from saomsg.msgtoindi import wrapper as MSG
-
-from saomsg.client import Subscriber
-from pyindi.client import INDIClient
+import os
 import asyncio
 import logging
 logging.getLogger().setLevel(logging.DEBUG)
-import os
 
 
 class WAVESERV(msg_device):
     """
     The msg to indi converter for the WFS/F5.
-    
     """
 
     ####################################
-    #INDI Vector property definitions
+    # INDI Vector property definitions
     #
-    # This set of methods define INDI 
-    # Properties for the attributes of 
+    # This set of methods define INDI
+    # Properties for the attributes of
     # the waveserv msg server.
-    # 
+    #
     def power_switches(self):
         """
         Define the INDI swithes related to power.
@@ -51,7 +47,6 @@ class WAVESERV(msg_device):
         vec = self.vectorFactory("Switch", vec_att, switches)
         self.IDDef(vec)
 
-
     def temps_numbers(self):
         """
         Define the INDI numbers related to temperature.
@@ -76,7 +71,7 @@ class WAVESERV(msg_device):
                 cpuTemp="CPU Temp",
                 vTemp="vTemp"
                 )
-        numbers=[]
+        numbers = []
         for name, label in names.items():
             numbers.append(dict(
                 name=name,
@@ -103,11 +98,11 @@ class WAVESERV(msg_device):
                     group="Registered Fxns"
                 ),
                 [
-                dict(
-                    name=k,
-                    label=k,
-                    text=k
-                )
+                    dict(
+                        name=k,
+                        label=k,
+                        text=k
+                    )
                 ]
 
             )
@@ -132,7 +127,7 @@ class WAVESERV(msg_device):
                     name="abort",
                     label="Abort",
                     state="Off"
-                    ), 
+                    ),
 
                 dict(
                     name="clear",
@@ -141,10 +136,10 @@ class WAVESERV(msg_device):
                     ),
                 ]
 
-        vec = self.vectorFactory( "Switch",  act_attr, act_switches)
+        vec = self.vectorFactory("Switch",  act_attr, act_switches)
 
         self.IDDef(vec)
-        state_attr = dict( 
+        state_attr = dict(
                 device=self.device,
                 name="axis_states",
                 label="Axis States",
@@ -153,13 +148,13 @@ class WAVESERV(msg_device):
                 group="Main",
                 rule="AnyOfMany"
                 )
-        
+
         state_switches = [
-                 dict(
+                dict(
                     name="busy",
                     label="Busy",
                     state="Off"
-                    ), 
+                    ),
 
                 dict(
                     name="estop",
@@ -168,19 +163,18 @@ class WAVESERV(msg_device):
                     ),
                     ]
 
-        logging.debug(f"Defining states")
+        logging.debug("Defining states")
         self.IDDef(
                 self.vectorFactory(
-                    "Switch", 
-                    state_attr, 
+                    "Switch",
+                    state_attr,
                     state_switches)
                 )
-       
 
     def axis_numbers(self):
         """
         Defines INDI numbers relating to axis
-        position. 
+        position.
         """
         axes = ("mirror", "trans", "select", "focus", "puntino")
         pos_types = ("actual", "commanded", "target")
@@ -193,13 +187,13 @@ class WAVESERV(msg_device):
                     state="Idle",
                     perm="ro",
                     group="Main"
-                    
+
                     )
             props = []
             for pos in pos_types:
-                if axis=="puntino" and pos == "commanded":
+                if axis == "puntino" and pos == "commanded":
                     continue
-                props.append(dict( 
+                props.append(dict(
                     name=pos,
                     label=pos,
                     min=-10000,
@@ -210,28 +204,29 @@ class WAVESERV(msg_device):
 
                     ))
             vec = self.vectorFactory(
-                    "Number", 
+                    "Number",
                     att,
                     props
                     )
             self.IDDef(vec)
 
-
     def axis_details(self):
         """
         Define other INDI vector properties related
-        to the axes. 
+        to the axes.
         """
 
         axis_map = dict(
             mirror=('m', 1),
-            trans= ('t', 2),
+            trans=('t', 2),
             camera=('c', 3),
-            focus= ('f', 4),
+            focus=('f', 4),
             )
 
-        prop_defaults = dict(min=-100000, max=100000, step=0.01, format="%8.3f", value=0)
-        special_positions = dict( 
+        prop_defaults = dict(
+                min=-100000, max=100000, step=0.01, format="%8.3f", value=0
+                )
+        special_positions = dict(
                 p70="WFS Position",
                 p71="Sci Position",
                 p72="WFS T Offset",
@@ -240,7 +235,7 @@ class WAVESERV(msg_device):
                 p75="Sci F Offset"
                 )
         props = []
-        for name,label in special_positions.items():
+        for name, label in special_positions.items():
             prop = dict(
                     name=name,
                     label=label
@@ -248,7 +243,8 @@ class WAVESERV(msg_device):
             prop.update(prop_defaults)
             props.append(prop)
 
-        vec = self.vectorFactory("Number",
+        vec = self.vectorFactory(
+                "Number",
                 dict(
                     device=self.device,
                     name="special_positions",
@@ -256,22 +252,22 @@ class WAVESERV(msg_device):
                     state="Idle",
                     perm="ro",
                     group="Special Positions"
-                    ),
+                ),
                 props
-                )
+            )
         self.IDDef(vec)
 
         for name, (letter, number) in axis_map.items():
 
             pnames = {
-                    f"{letter}E"      : "Encoder Scale",
+                    f"{letter}E": "Encoder Scale",
                     f"{letter}MlimPos": "Limit of Pos. Travel",
                     f"{letter}PlimPos": "Limit of Neg. Travel",
                     f"{letter}HomePos": "Encoder Home",
-                    f"{letter}DAC"    : "DAC Value",
+                    f"{letter}DAC": "DAC Value",
                     f"{letter}DACBias": "DAC Bias",
                     }
-                    
+
             vec_att = dict(
                     device=self.device,
                     name=f"{name}_details",
@@ -281,7 +277,7 @@ class WAVESERV(msg_device):
                     group=f"{name} Details"
                     )
 
-            props =[]
+            props = []
             for pname, label in pnames.items():
                 prop = dict(
                         name=pname,
@@ -337,17 +333,16 @@ class WAVESERV(msg_device):
                 props2.append(prop)
             vec = self.vectorFactory("Number", vec_att2, props2)
             self.IDDef(vec)
-    #END Vector Property definitions
+    # END Vector Property definitions
     ##################################
-    
 
     ################################
-    #MSG subscription handlers
+    # MSG subscription handlers
     # thses methods are called when the
     # listed MSG variables are sent from the
     # MSG server. They usually update an INDI 
     # Vector property
-    @MSG.subscribe("p70","p71","p72","p73","p74","p75")
+    @MSG.subscribe("p70", "p71", "p72", "p73", "p74", "p75")
     def on_special_pos_change(self, item, value):
         """
         Called when we get a new message for any of the 
@@ -359,7 +354,7 @@ class WAVESERV(msg_device):
 
 
     @MSG.subscribe("WAVESERV", 
-            "mE", "mMlimPos", "mplimPos", "mHomePos","mDAC", "mDACBias")
+            "mE", "mMlimPos", "mplimPos", "mHomePos", "mDAC", "mDACBias")
     def on_mirror_details_change(self, item, value):
         self.IDMessage(f"mirror details called {item}={value}")
         vec = self.IUFind("mirror_details")
@@ -368,20 +363,18 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
     @MSG.subscribe("WAVESERV", 
-             "i130","i131","i132","i133","i163","i167",
-             "p105","p106","p107","p102","p103",
-             "i116","i117",
+             "i130", "i131", "i132", "i133", "i163", "i167",
+             "p105"," p106", "p107", "p102", "p103",
+             "i116", "i117",
              "p108",
-             "i111","i195","i115","i164","i165")
+             "i111", "i195", "i115", "i164", "i165")
     def on_mirror_servo_change(self, item, value):
         vec = self.IUFind("mirror_servo")
 
         value = float(value[0])
         vec[item].value = value
         self.IDSet(vec)
-       
 
     @MSG.subscribe("WAVESERV","mA","mC","mT")
     def on_mirror_change(self, item, value ):
@@ -400,8 +393,7 @@ class WAVESERV(msg_device):
 
         self.IDSet(vec)
 
-
-    @MSG.subscribe("WAVESERV","tA","tC","tT",)
+    @MSG.subscribe("WAVESERV", "tA", "tC", "tT")
     def on_trans_change(self, item, value ):
         vec = self.IUFind("trans")
         if item == "tA":
@@ -414,7 +406,7 @@ class WAVESERV(msg_device):
         self.IDSet(vec)
 
     @MSG.subscribe("WAVESERV", 
-            "tE", "tMlimPos", "tplimPos", "tHomePos","tDAC", "tDACBias")
+            "tE", "tMlimPos", "tplimPos", "tHomePos", "tDAC", "tDACBias")
     def on_trans_details_change(self, item, value):
         vec = self.IUFind("trans_details")
 
@@ -422,13 +414,12 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
     @MSG.subscribe("WAVESERV", 
-             "i230","i231","i232","i233","i263","i267",
-             "p205","p206","p207","p202","p203",
-             "i216","i217",
+             "i230", "i231", "i232", "i233", "i263", "i267",
+             "p205", "p206", "p207", "p202", "p203",
+             "i216", "i217",
              "p208",
-             "i211","i295","i215","i264","i265")
+             "i211", "i295", "i215", "i264", "i265")
     def on_trans_servo_change(self, item, value):
         vec = self.IUFind("trans_servo")
 
@@ -436,8 +427,7 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
-    @MSG.subscribe("WAVESERV","fA","fC","fT",)
+    @MSG.subscribe("WAVESERV", "fA", "fC", "fT",)
     def on_focus_change(self, item, value ):
         vec = self.IUFind("focus")
         if item == "fA":
@@ -451,7 +441,7 @@ class WAVESERV(msg_device):
 
 
     @MSG.subscribe("WAVESERV", 
-            "fE", "fMlimPos", "fplimPos", "fHomePos","fDAC", "fDACBias")
+            "fE", "fMlimPos", "fplimPos", "fHomePos", "fDAC", "fDACBias")
     def on_focus_details_change(self, item, value):
         vec = self.IUFind("focus_details")
 
@@ -459,13 +449,12 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
     @MSG.subscribe("WAVESERV", 
-             "i430","i431","i432","i433","i463","i467",
-             "p405","p406","p407","p402","p403",
-             "i416","i417",
+             "i430", "i431", "i432", "i433", "i463", "i467",
+             "p405", "p406", "p407", "p402", "p403",
+             "i416", "i417",
              "p408",
-             "i411","i495","i415","i464","i465")
+             "i411", "i495", "i415", "i464", "i465")
     def on_focus_servo_change(self, item, value):
         vec = self.IUFind("focus_servo")
 
@@ -473,9 +462,7 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
-
-    @MSG.subscribe("WAVESERV","cA","cC","ct",)
+    @MSG.subscribe("WAVESERV", "cA", "cC", "ct",)
     def on_camera_change(self, item, value ):
         vec = self.IUFind("select")
         if item == "cA":
@@ -497,20 +484,18 @@ class WAVESERV(msg_device):
         vec[item].value = value
         self.IDSet(vec)
 
-
     @MSG.subscribe("WAVESERV", 
-             "i330","i331","i332","i333","i363","i367",
-             "p305","p306","p307","p302","p303",
-             "i316","i317",
+             "i330", "i331", "i332", "i333", "i363", "i367",
+             "p305", "p306", "p307", "p302", "p303",
+             "i316", "i317",
              "p308",
-             "i311","i395","i315","i364","i365")
+             "i311", "i395", "i315", "i364", "i365")
     def on_camera_servo_change(self, item, value):
         vec = self.IUFind("camera_servo")
 
         value = float(value[0])
         vec[item].value = value
         self.IDSet(vec)
-
 
 
     @MSG.subscribe("WAVESERV","pA", "pt")
@@ -522,9 +507,6 @@ class WAVESERV(msg_device):
             vec["target"].value = float(value[0])
    
         self.IDSet(vec)
-
-
-
 
     async def buildProperties(self):
         await super().buildProperties()
@@ -586,12 +568,11 @@ class WAVESERV(msg_device):
         """
         This method is called whenever one of the
         power states are published from the MSG
-        server. 
+        server.
 
         args:
         item => Name of power msg value
-        value => new value of the power item. 
-
+        value => new value of the power item.
         """
         power = self.IUFind("power")
         #changed = self.whats_changed(power)
@@ -612,7 +593,6 @@ class WAVESERV(msg_device):
 
         self.IDSet(power)
 
-
     @MSG.subscribe("WAVESERV", 
             "mMtemp",
             "tMTemp",
@@ -624,27 +604,25 @@ class WAVESERV(msg_device):
             "fSTemp",
             "cpuTemp",
             "vTemp"
-            )
+        )
     def on_temps(self, item, value):
         temps = self.IUFind("temps")
         self.IDMessage(f"{item} changed to {value}")
         temps[item].value = float(value[0])
         self.IDSet(temps)
 
-    #END MSG subscription handlers
+    # END MSG subscription handlers
     #########################################
 
-async def main():    
+
+async def main():   
     hostport = os.environ.get("INDICONFIG", )
     device_name = os.environ.get("INDIDEV", )
     if hostport is None:
-        host,port = "wavefront.mmto.arizona.edu", 3000
+        host ,port = "wavefront.mmto.arizona.edu", 3000
     else:
-        host,port = hostport.split(':')
-    m=WAVESERV(host, int(port), device_name)
+        host, port = hostport.split(':')
+    m = WAVESERV(host, int(port), device_name)
     await m.astart()
 
-
-
 asyncio.run(main())
-

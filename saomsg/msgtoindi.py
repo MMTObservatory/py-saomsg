@@ -3,19 +3,13 @@ import logging
 from .client import Subscriber
 import asyncio
 import inspect
-from typing import Callable
 import functools
 import sys
 import traceback
-import inspect
 import os
-import asyncio
 from pathlib import Path
 import datetime
-from typing import Union
 import time
-import functools
-import copy
 logging.getLogger().setLevel(logging.DEBUG)
 
 
@@ -29,7 +23,7 @@ if INDI_LOG_PATH:
         filename=log_path/f'{timestr}.log',
         level=logging.DEBUG
     )
-    
+
 
 class wrapper:
     """This class contains the method wrapper que.
@@ -43,7 +37,8 @@ class wrapper:
 
     def __init__(self):
         raise NotImplementedError(
-                "There is no reason to instantiate this class. It is used as a namespace"
+                "There is no reason to instantiate this class.\
+                        It is used as a namespace"
                 )
 
     @classmethod
@@ -57,7 +52,6 @@ class wrapper:
         def handle_fxn(fxn):
             cls.que.put_nowait(('sub', fxn, items))
         return handle_fxn
-
 
 
 class msg_device(device):
@@ -96,7 +90,6 @@ class msg_device(device):
     def handle(self, item, fxn):
 
         self._handlers['subscriptions'][item] = fxn
- 
 
     async def repeat_queuer(self):
         while self.running:
@@ -109,7 +102,7 @@ class msg_device(device):
 
             except Exception as error:
                 self.IDMessage(f"There was an error running {func}: {error}")
-                #also push it to stderr
+                # also push it to stderr
                 sys.stderr.write(
                     f"There was an exception the \
                     later decorated fxn {func}:")
@@ -118,7 +111,6 @@ class msg_device(device):
                 sys.stderr.write("See traceback below.")
                 traceback.print_exc(file=sys.stderr)
                 sys.stderr.flush()
-
 
     def do_it_async(self, coro):
         """
@@ -136,7 +128,7 @@ class msg_device(device):
                 (coro, resp_que)
                 )
 
-        start=time.time()
+        start = time.time()
         while 1:
             try:
                 resp_que.get()
@@ -145,11 +137,9 @@ class msg_device(device):
                 # 0.1 seconds
                 if (time.time() - start) > 0.1:
                     raise RuntimeError(
-                            f"resp_que did not respond in a timely manner for {coro}"
+                            f"resp_que did not respond in a\
+                                    timely manner for {coro}"
                             )
-
-                
-
 
     async def run_async(self):
         """Schedule tasks from do_it_async
@@ -159,9 +149,11 @@ class msg_device(device):
 
             foo = await self._asynctasks_que.get()
             if hasattr(foo, "__iter__"):
-                coro,resp_que = foo
+                coro, resp_que = foo
             else:
-                raise RuntimeError(f"something wrong with asynctasks_que output. {foo}")
+                raise RuntimeError(
+                        f"something wrong with asynctasks_que output. {foo}"
+                        )
             task = asyncio.create_task(coro)
             self._asynctasks.append(task)
             await resp_que.put(task)
@@ -183,7 +175,7 @@ class msg_device(device):
                     name="CONNECT",
                     label="Connect",
                     state="Off"
-                ), 
+                ),
                 dict(
                     name="DISCONNECT",
                     label="Disconnect",
@@ -193,51 +185,45 @@ class msg_device(device):
         )
         self.IDDef(vec)
 
-
-    
     async def startstop(self):
         """
         This funtion is a bridge between the sync connect
-        button and the async event loop. Here we wait for a 
-        the start variable from the startstop_que. If we 
-        are starting we build the properties and run the 
-        mainloop as a task. 
+        button and the async event loop. Here we wait for a
+        the start variable from the startstop_que. If we
+        are starting we build the properties and run the
+        mainloop as a task.
         """
         while True:
             start = await self.startstop_que.get()
-                    
+
             if start:
                 if self.msg_client.running:
                     logging.debug("Tried to start when already running")
                 else:
-                    self.IDMessage(f"Connecting to msg_client")
+                    self.IDMessage("Connecting to msg_client")
                     await self.msg_client.open()
-                    if self.running == False:
+                    if self.running is False:
                         raise RuntimeError("Could not connect to msg server.")
-                    
-                    task = asyncio.create_task(self.msg_client.mainloop())
+
+                    asyncio.create_task(self.msg_client.mainloop())
                     self.IDMessage("Building property\n")
                     await self.buildProperties()
 
             else:
                 if self.msg_client.running:
                     await self.msg_client.stop()
-                    
+
                 else:
                     logging.debug("Tried to stop when stopped.")
-                
-            
-    
 
     async def asyncInitProperties(self, device=None):
         """
-        Call build properties when we get a getProperties 
-        INDI tag. 
+        Call build properties when we get a getProperties
+        INDI tag.
         """
         self.IDMessage("called async init")
         if self.msg_client.running:
             await self.buildProperties()
-
 
     async def do_the_getting(self):
         """
@@ -246,14 +232,14 @@ class msg_device(device):
         """
         while self.running:
             msg_name = await self.msgget_que.get()
-            
+
             value = await self.msg_client.get(msg_name)
             vec = self.IUFind(msg_name)
             button = self.IUFind(f"{msg_name}_getorsub")
             button[f"get_{msg_name}"].value = "Off"
             if button.state != "Ok":
                 button.state = "Idle"
-            
+
             if type(value) in (list, tuple):
                 vec[msg_name].value = " ".join(value)
             elif type(value) in (str, int, float):
@@ -264,12 +250,11 @@ class msg_device(device):
             self.IDSet(vec)
             self.IDSet(button)
 
-
     async def astart(self):
         """Start up in async mode
-        This is a kind of highjacking of the 
+        This is a kind of highjacking of the
         pyindi astart method so we can add some
-        tasks to the gather function. 
+        tasks to the gather function.
         """
 
         self.mainloop = asyncio.get_running_loop()
@@ -279,12 +264,12 @@ class msg_device(device):
             self.run(),
             self.toindiserver(),
             self.repeat_queuer(),
-	    self.do_the_getting(),
+            self.do_the_getting(),
             self.run_async(),
             self.startstop()
         )
         await future
- 
+
     def whats_changed(self, name, values, names, device=None):
         """
         A convienience method to let you know which values
@@ -300,21 +285,19 @@ class msg_device(device):
 
         return vec, changed
 
-
     @device.NewVectorProperty("CONNECTION")
     def connect(self, device, name, states, names):
         """
-        The pyINDI way of connecting to a device. In this 
+        The pyINDI way of connecting to a device. In this
         case we are not actually connecting to a peice of
-        hardware, we are connecting to the MSG server. 
-
+        hardware, we are connecting to the MSG server.
         """
         vec, change = self.whats_changed(
-                name, 
-                states, 
-                names, 
+                name,
+                states,
+                names,
                 device)
-        
+
         for key, val in change.items():
             self.IDMessage(f"Setting {key} to {val}")
 
@@ -333,20 +316,18 @@ class msg_device(device):
 
         elif "DISCONNECT" in change:
             if change["DISCONNECT"] == "On":
-                self.startstop_que.put_nowait(False) 
+                self.startstop_que.put_nowait(False)
                 vec['DISCONNECT'].value = "On"
                 vec['CONNECT'].value = "Off"
                 vec.state = "Idle"
 
             else:
-                self.startstop_que.put_nowait(True) 
+                self.startstop_que.put_nowait(True)
                 vec['DISCONNECT'].value = "Off"
                 vec['CONNECT'].value = "On"
-                vec.state="Ok"
+                vec.state = "Ok"
 
         self.IDSet(vec)
-
-
 
     def ISNewSwitch(self, device, name, values, names):
         vec = self.IUFind(name)
@@ -355,7 +336,7 @@ class msg_device(device):
             return
 
         names = names[0]
-        do_what, with_what= names.split('_',1)
+        do_what, with_what = names.split('_', 1)
         self.IDMessage(names)
         if do_what == "subscribe":
             self.IDMessage(f"Attempting to subscibe to {with_what}")
@@ -363,11 +344,11 @@ class msg_device(device):
                     self.msg_client.server_info['subscribed']:
                 self.IDMessage(f"Subscribing to {with_what}")
                 self.msg_client.subscribe(
-                        with_what, 
+                        with_what,
                         lambda value: self.sub_callback(with_what, value)
                         )
                 vec.state = "Ok"
-                vec[names].value="On"
+                vec[names].value = "On"
                 self.IDSet(vec)
 
             else:
@@ -377,13 +358,12 @@ class msg_device(device):
 
         else:
             self.IDMessage("Not valid {do_what}")
-                        
+
     def sub_callback(self, name, value):
         self.IDMessage(f"Setting {name} to {value}")
         vec = self.IUFind(name)
         vec[name] = value[0]
         self.IDSet(vec)
-
 
     async def buildProperties(self):
         """
@@ -391,32 +371,34 @@ class msg_device(device):
         in the msg client
         """
         self.IDMessage("buildProperties called.")
-        
+
         hds = self._handlers['subscriptions']
         for item in self.msg_client.server_info["published"]:
             logging.debug("onto item {item}")
             if item in hds.keys():
-                
+
                 self.IDMessage(f"SUBSCRIBING TO {item}")
-                
-                # I am not going to lie. The next line of code 
-                # should be sent back to hell from whence it 
-                # came but it does work. 
-                fxn = lambda val, item=item: hds[item](self, item, val)
+
+                # I am not going to lie. The next line of code
+                # should be sent back to hell from whence it
+                # came but it does work.
+                # fxn = lambda val, item=item: hds[item](self, item, val)
+                def fxn(val, item=item):
+                    hds[item](self, item, val)
 
                 functools.update_wrapper(fxn, hds[item])
                 self.msg_client.subscribe(
-                        item, 
+                        item,
                         fxn
                         )
 
-            #build default get and subscribe stuff.
+            # build default get and subscribe stuff.
             value_def = dict(
                     device=self._devname,
                     name=item,
                     label=item,
                     group="published",
-                    perm='ro', 
+                    perm='ro',
                     state="Idle",
                     timeout="0",
                     )
@@ -428,19 +410,19 @@ class msg_device(device):
                     )
 
             value_vector = self.vectorFactory(
-                    "defTextVector", 
-                    value_def, 
+                    "defTextVector",
+                    value_def,
                     [value_prop]
                     )
 
             self.IDDef(value_vector)
 
-            button_def= dict(
+            button_def = dict(
                     device=self._devname,
                     name=f"{item}_getorsub",
                     label=item,
                     group="buttons",
-                    perm='rw', 
+                    perm='rw',
                     state="Idle",
                     rule="OneOfMany",
                     timeout="0",
@@ -450,7 +432,7 @@ class msg_device(device):
                     name=f"get_{item}",
                     label="get",
                     value=""
-                    ) 
+                    )
 
             sub_switch = dict(
                     name=f"subscribe_{item}",
@@ -459,23 +441,21 @@ class msg_device(device):
                     )
 
             button_vector = self.vectorFactory(
-                    "defSwitchVector", 
-                    button_def, 
+                    "defSwitchVector",
+                    button_def,
                     [get_switch, sub_switch]
                     )
             self.IDDef(button_vector)
         logging.debug("Finished building properties")
 
-
-
     @device.repeat(1000)
     async def idle_tasks(self):
         conn = self.IUFind("CONNECTION")
-        if self.msg_client.running:  
+        if self.msg_client.running:
             if conn["CONNECT"].value == "Off":
                 conn["CONNECT"].value = "On"
                 conn["DISCONNECT"].value = "Off"
-                conn.state="Idle"
+                conn.state = "Idle"
                 self.IDSet(conn)
 
         else:
@@ -483,10 +463,8 @@ class msg_device(device):
                 self.IDMessage("we are not connected to msg_client")
                 conn["CONNECT"].value = "Off"
                 conn["DISCONNECT"].value = "On"
-                conn.state="Idle"
+                conn.state = "Idle"
                 self.IDSet(conn)
-          
-
 
     @classmethod
     def subscribe(cls, value):
@@ -494,6 +472,3 @@ class msg_device(device):
             return fxn
 
         return handle_fxn
-
-
-

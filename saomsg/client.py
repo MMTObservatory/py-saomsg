@@ -1,20 +1,19 @@
 import asyncio
-import time
 import inspect
 from dataclasses import dataclass
 import typing
 import logging
 
 
-
-# Give some structure to the 
-# MSG string responses. This 
-# might be overengineering but 
-# I hope it will provide some 
-# clarity. 
+# Give some structure to the
+# MSG string responses. This
+# might be overengineering but
+# I hope it will provide some
+# clarity.
 @dataclass
 class MSG:
-       msgid: typing.Union[int, None]
+    msgid: typing.Union[int, None]
+
 
 @dataclass
 class SET(MSG):
@@ -26,12 +25,13 @@ class SET(MSG):
 class ACK(MSG):
     args: tuple
 
+
 @dataclass
 class NAK(MSG):
     info: str
 
 
-def msg_factory(data:str):
+def msg_factory(data: str):
     """
     Best guess as to what type of
     msg response we are receiving.
@@ -47,8 +47,6 @@ def msg_factory(data:str):
         msgid = None
         Type = vals[0]
         argindex = 1
-        
-
 
     if Type == "set":
         msg = SET(msgid, vals[argindex], vals[argindex+1:])
@@ -57,14 +55,14 @@ def msg_factory(data:str):
         msg = ACK(msgid, vals[argindex:])
 
     elif Type == "nak":
-        msg = NAK(msgid, " ".join(vals[argindex:]) )
+        msg = NAK(msgid, " ".join(vals[argindex:]))
 
     else:
         msg = MSG(msgid)
         msg.info = vals[argindex:]
 
     return msg
-   
+
 
 class MSGClient(object):
     """
@@ -74,7 +72,6 @@ class MSGClient(object):
         self.host = host
         self.port = port
         self.server_info = dict()
-        
         self.running = False
 
     async def open(self):
@@ -89,7 +86,8 @@ class MSGClient(object):
                 self.port
             )
         except Exception as e:
-            msg = f"Error connecting to MSG server at {self.host}:{self.port}: {e}"
+            msg = f"Error connecting to MSG server at\
+                    {self.host}:{self.port}: {e}"
             logging.error(msg)
             self.running = False
             return False
@@ -111,10 +109,10 @@ class MSGClient(object):
 
     async def _writemsg(self, msg):
         """
-        Send a message to the MSG server and return the first line returned.
-        The first returned line will have an 'ack' or 'nak' to denote a successful
-        or unsuccessful command. What to do with lines past the first line depends on
-        the specific command.
+        Send a message to the MSG server and return the first line
+        returned. The first returned line will have an 'ack' or 'nak'
+        to denote a successful or unsuccessful command. What to do
+        with lines past the first line depends on the specific command.
         """
         self.writer.write(msg.encode())
         await self.writer.drain()
@@ -133,7 +131,8 @@ class MSGClient(object):
             errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
         if param not in self.server_info['published']:
-            errmsg = f"{param} not published by MSG server {self.server_info['name']}"
+            errmsg = f"{param} not published by MSG server\
+                    {self.server_info['name']}"
             raise ValueError(errmsg)
         msg = f"1 get {param}\n"
         data = await self._writemsg(msg)
@@ -154,14 +153,16 @@ class MSGClient(object):
 
     async def run(self, command, *pars):
         """
-        Implement running an MSG command. Only an 'ack' or a 'nak' are returned so
-        check that to see if command was succesful. Return True or False accordingly.
+        Implement running an MSG command. Only an 'ack' or a 'nak'
+        are returned so check that to see if command was succesful.
+        Return True or False accordingly.
         """
         if not self.running:
             errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
         if command not in self.server_info['registered']:
-            errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
+            errmsg = f"{command} not registered by MSG\
+                    server {self.server_info['name']}"
             raise ValueError(errmsg)
         if len(pars) > 0:
             params = " ".join(str(x) for x in pars)
@@ -175,26 +176,28 @@ class MSGClient(object):
             value = True
             logging.debug(f"Successfully ran {command} with params {params}")
         else:
-            logging.debug(f"Failed to run {command} with params {params} on MSG server")
+            logging.debug(f"Failed to run {command} with params\
+                    {params} on MSG server")
             value = False
         return value
-
 
     async def _list(self):
         """
         Implement the MSG lst command and use it to populate self.server_info
         """
+        if not self.running:
+            errmsg = "MSG server not currently connected"
+            raise ValueError(errmsg)
         msg = "1 lst\n"
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
-            #print("Successfully sent 'lst' command")
             self.server_info['published'] = list()
             self.server_info['registered'] = list()
+
             while True:
                 rawdata = await self.reader.readline()
                 line = rawdata.decode()
                 if "----LIST----" in line:
-                    #print("Done processing lst output.")
                     break
                 if 'server' in line:
                     self.server_info['name'] = line.split()[1]
@@ -205,21 +208,17 @@ class MSGClient(object):
                     var = line.split()[1]
                     self.server_info['registered'].append(var)
 
-    
-
-
 
 # Subscriber class
-
 class Subscriber(MSGClient):
     """
-    This class expands on the MSGClient class by allowing 
+    This class expands on the MSGClient class by allowing
     for more asynchronous communication. This is done by
-    having a run-forever loop that reads from the MSG 
-    server. All get or subscribe queries are given 
-    a msgid. The read loop then matches ACKs with 
-    the msgid and sends the response to the appropriate 
-    asyncio queue. 
+    having a run-forever loop that reads from the MSG
+    server. All get or subscribe queries are given
+    a msgid. The read loop then matches ACKs with
+    the msgid and sends the response to the appropriate
+    asyncio queue.
     """
 
     MAXID = 100000
@@ -231,21 +230,21 @@ class Subscriber(MSGClient):
         self.tasks = []
         self.outstanding_replies = {}
         self.nextid = 1
-        
 
-    def subscribe(self, param, callback=None): 
+    def subscribe(self, param, callback=None):
 
         """Subscribe to a msg variable with optional callback the
-        callback should be a coroutine that excepts the value of 
-        the variable as its only argument. The Callback should not 
-        be CPU intensive or we will bog down the mainloop. If we 
+        callback should be a coroutine that excepts the value of
+        the variable as its only argument. The Callback should not
+        be CPU intensive or we will bog down the mainloop. If we
         want to do CPU bound stuff we will need to come up with a
         way to run the callbacks in the executor. """
-        
+
         msgid = self.getid()
 
         if param not in self.server_info['published']:
-            errmsg = f"{param} not published by MSG server {self.server_info['name']}"
+            errmsg = f"{param} not published by MSG\
+                    server {self.server_info['name']}"
             raise ValueError(errmsg)
 
         if param not in self.server_info['subscribed']:
@@ -256,79 +255,57 @@ class Subscriber(MSGClient):
 
             self.writer.write(f"{msgid} sub {param}\n".encode())
 
-        
-
     def unsubscribe(self, param):
-        
+
         if param in self.server_info['subscribed']:
             msgid = self.getid()
             del self.server_info['subscribed']
             self.writer.write(f"{msgid} uns {param}\n".encode())
 
-
-
-
-#    def __getattr__(self, param):
-#
-#        if param in self.server_info['subscribed']:
-#            return self.server_info['subscribed'][param]
-#
-#        elif param in self.server_info['registered']:
-#            return lambda *args : self.run(param, *args)
-#
-#        else:
-#            errmsg = f"{param} not subscribed by MSG server\
-#            {self.server_info['name']} use subscribe method"
-#            raise ValueError(errmsg)
-
-
     async def mainloop(self, timeout=None):
-        """ Read and handle data from msg server. 
-        
+        """ Read and handle data from msg server.
         """
-        self.running=True
-        starttime = time.time()
+        self.running = True
         rawdata = b''
         while self.running:
             logging.debug("reading data")
             try:
-                rawdata+= await asyncio.wait_for(self.reader.read(1), 5.0)
-            
-            except asyncio.TimeoutError as TO:
-                # Give us a chance to check the loop. 
-                logging.debug(f"timeout")
+                rawdata += await asyncio.wait_for(self.reader.read(1), 5.0)
+
+            except asyncio.TimeoutError:
+                # Give us a chance to check the loop.
+                logging.debug("timeout")
                 continue
 
             except Exception as error:
                 logging.warn(f"We have a read error: {[error]}")
                 raise error
 
-
-            data=rawdata.decode()
+            data = rawdata.decode()
 
             if rawdata.endswith(b'\n'):
                 rawdata = b""
             else:
                 continue
-            
+
             logging.debug(f"raw data is {data}")
             self.last_data = data
-            vals = data.split()
             acknak = msg_factory(data)
-            
 
-
-            # SET is used for subscribed parameters. 
+            # SET is used for subscribed parameters.
             if type(acknak) is SET:
-                self.server_info['subscribed'][acknak.param] = " ".join(acknak.value)
+                self.server_info['subscribed'][acknak.param] =\
+                        " ".join(acknak.value)
                 logging.debug(f"We have a subscribed acknack {acknak.param}")
 
                 if acknak.param in self.callbacks:
                     cb = self.callbacks[acknak.param]
                     loop = asyncio.get_running_loop()
-                    
-                    logging.debug(f"Calling {cb.__name__} ({cb.__doc__}) with {acknak.param} value {acknak.value}")
-                    if inspect.iscoroutinefunction( cb ):
+                    logging.debug(
+                            f"Calling {cb.__name__} ({cb.__doc__})\
+                                    with {acknak.param} value {acknak.value}"
+                            )
+                    if inspect.iscoroutinefunction(cb):
                         task = loop.create_task(cb(*acknak.value))
                         self.tasks.append(task)
 
@@ -338,7 +315,7 @@ class Subscriber(MSGClient):
             # Other msg reads should be from run commands or gets.
             # Check to see if anyone is waiting for a reply.
             elif acknak.msgid in self.outstanding_replies:
-                aq =  self.outstanding_replies[acknak.msgid]
+                aq = self.outstanding_replies[acknak.msgid]
                 if type(acknak) is ACK:
                     reply = acknak.args
                 elif type(acknak) is NAK:
@@ -346,16 +323,11 @@ class Subscriber(MSGClient):
                 else:
                     raise RuntimeError(f"Expected ack or nak not {acknak}")
 
-
                 await aq.put(reply)
                 del self.outstanding_replies[acknak.msgid]
 
-
             else:
                 logging.warn(f"gracefully ignoring {acknak}")
-
-
-
 
     async def stop(self):
         self.running = False
@@ -364,19 +336,22 @@ class Subscriber(MSGClient):
 
         await asyncio.sleep(0.5)
 
-
     async def run(self, command, *pars, timeout=None):
         """
-        Implement running an MSG command. Only an 'ack' or a 'nak' are returned so
-        check that to see if command was successful. Return True or False accordingly.
+        Implement running an MSG command. Only an 'ack' or a 'nak' are
+        returned so check that to see if command was successful.
+        Return True or False accordingly.
         """
-        
+
         if type(timeout) not in (float, int):
             if timeout is not None:
-                raise ValueError(f"timeout must be float or int. Not {type(timeout)}")
+                raise ValueError(
+                        f"timeout must be float or int. Not {type(timeout)}"
+                        )
 
         if command not in self.server_info['registered']:
-            errmsg = f"{command} not registered by MSG server {self.server_info['name']}"
+            errmsg = f"{command} not registered by MSG\
+                    server {self.server_info['name']}"
             raise ValueError(errmsg)
         params = " ".join(str(x) for x in pars)
 
@@ -385,14 +360,13 @@ class Subscriber(MSGClient):
         aq = asyncio.Queue()
         self.outstanding_replies[msgid] = aq
 
-
         msg = f"{msgid} {command} {params}\n"
 
         self.writer.write(msg.encode())
         await self.writer.drain()
 
         if timeout:
-            resp = await asyncio.wait_for( aq.get(), timeout)
+            resp = await asyncio.wait_for(aq.get(), timeout)
         else:
             resp = await aq.get()
 
@@ -401,14 +375,11 @@ class Subscriber(MSGClient):
 
         return resp
 
-
-
     def getid(self):
         msgid = self.nextid
-        self.nextid+=1
-        self.nextid%=self.MAXID
+        self.nextid += 1
+        self.nextid %= self.MAXID
         return msgid
-
 
     async def get(self, param):
 
@@ -421,14 +392,13 @@ class Subscriber(MSGClient):
         await self.writer.drain()
 
         return await aq.get()
-        
 
 
 class SubscriberSingleton:
 
     """For most uses we probably will only ever need one
-    instance of a client per msg server. This will 
-    instantiate a Subscriber if none exist for 
+    instance of a client per msg server. This will
+    instantiate a Subscriber if none exist for
     that host and port"""
 
     clients = {}
@@ -438,5 +408,3 @@ class SubscriberSingleton:
             cls.clients[(host, port)] = Subscriber(host, port)
 
         return cls.clients[(host, port)]
-
-
