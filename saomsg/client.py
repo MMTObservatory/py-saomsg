@@ -265,8 +265,12 @@ class Subscriber(MSGClient):
     async def mainloop(self, timeout=None):
         """ Read and handle data from msg server.
         """
-        self.running = True
+        
+        if not self.running:
+            raise RuntimeError("Must call open() before mainloop()")
+
         rawdata = b''
+        
         while self.running:
             logging.debug("reading data")
             try:
@@ -327,7 +331,14 @@ class Subscriber(MSGClient):
                 del self.outstanding_replies[acknak.msgid]
 
             else:
+                # TODO
+                # When you subscribe to a variable the server 
+                # Imediately responds with an ack and the inital value.
+                # We currently Don't have a means of capturing this
+                # value so it is gracefully ignored. We need to
+                # find a way to capture it and apply the callback.
                 logging.warn(f"gracefully ignoring {acknak}")
+
 
     async def stop(self):
         self.running = False
