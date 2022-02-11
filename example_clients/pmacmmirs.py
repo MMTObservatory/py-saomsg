@@ -315,21 +315,6 @@ async def test():
                 "detenttol",
 
         ))
-    
-#    try:
-#        now = datetime.datetime.now()
-#        fname = now.strftime("%d%b%Y-%H%M%S.pkl")
-#        with open(fname, 'wb') as pkl:
-#            pickle.dump( df, pkl )
-#    except Exception as error:
-#        print(error)
-#
-#    try:
-#        await pmac.run("filter1Wheel", 'Y')
-#        await pmac.run("filter2Wheel", 'HK3')
-#        await pmac.run("grismWheel", 'H3000')
-#    except Exception as error:
-#        print('Error')
 
     return df
 

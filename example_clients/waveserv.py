@@ -176,6 +176,8 @@ class WAVESERV(msg_device):
         Defines INDI numbers relating to axis
         position.
         """
+        #TODO puntino was removed in the early 2000's and replaced
+        # With stellacam. The software should reflect this. 
         axes = ("mirror", "trans", "select", "focus", "puntino")
         pos_types = ("actual", "commanded", "target")
 
@@ -499,7 +501,10 @@ class WAVESERV(msg_device):
 
 
     @MSG.subscribe("WAVESERV","pA", "pt")
-    def on_puntino_change(self, item, value ):
+    def on_stellacam_change(self, item, value ):
+        """
+
+        """
         vec = self.IUFind("puntino")
         if item == "pA":
             vec["actual"].value = float(value[0])
