@@ -10,8 +10,10 @@ import os
 from pathlib import Path
 import datetime
 import time
-logging.getLogger().setLevel(logging.DEBUG)
 
+
+mlogger = logging.getLogger("msgtoindi-logger")
+mlogger.addHandler(logging.FileHandler(filename="msgtoindi.log", mode='w'))
 
 INDI_LOG_PATH = os.environ.get("INDI_LOG_PATH")
 if INDI_LOG_PATH:
@@ -91,26 +93,26 @@ class msg_device(device):
 
         self._handlers['subscriptions'][item] = fxn
 
-    async def repeat_queuer(self):
-        while self.running:
-            func = await self.repeat_q.get()
-            try:
-                if inspect.iscoroutinefunction(func):
-                    await func(self)
-                else:
-                    func(self)
-
-            except Exception as error:
-                self.IDMessage(f"There was an error running {func}: {error}")
-                # also push it to stderr
-                sys.stderr.write(
-                    f"There was an exception the \
-                    later decorated fxn {func}:")
-
-                sys.stderr.write(f"{error}")
-                sys.stderr.write("See traceback below.")
-                traceback.print_exc(file=sys.stderr)
-                sys.stderr.flush()
+#    async def repeat_queuer(self):
+#        while self.running:
+#            func = await self.repeat_q.get()
+#            try:
+#                if inspect.iscoroutinefunction(func):
+#                    await func(self)
+#                else:
+#                    func(self)
+#
+#            except Exception as error:
+#                self.IDMessage(f"There was an error running {func}: {error}")
+#                # also push it to stderr
+#                sys.stderr.write(
+#                    f"There was an exception the \
+#                    later decorated fxn {func}:")
+#
+#                sys.stderr.write(f"{error}")
+#                sys.stderr.write("See traceback below.")
+#                traceback.print_exc(file=sys.stderr)
+#                sys.stderr.flush()
 
     def do_it_async(self, coro):
         """
@@ -187,7 +189,7 @@ class msg_device(device):
 
     async def startstop(self):
         """
-        This funtion is a bridge between the sync connect
+        This function is a bridge between the sync connect
         button and the async event loop. Here we wait for a
         the start variable from the startstop_que. If we
         are starting we build the properties and run the
@@ -198,12 +200,13 @@ class msg_device(device):
 
             if start:
                 if self.msg_client.running:
-                    logging.debug("Tried to start when already running")
+                    mlogger.debug("Tried to start when already running")
                 else:
                     self.IDMessage("Connecting to msg_client")
                     await self.msg_client.open()
-                    if self.running is False:
+                    if self.msg_client.running is False:
                         raise RuntimeError("Could not connect to msg server.")
+                        self.IDMessage(f"Could not connect to msg server.")
 
                     asyncio.create_task(self.msg_client.mainloop())
                     self.IDMessage("Building property\n")
@@ -214,7 +217,7 @@ class msg_device(device):
                     await self.msg_client.stop()
 
                 else:
-                    logging.debug("Tried to stop when stopped.")
+                    mlogger.debug("Tried to stop when stopped.")
 
     async def asyncInitProperties(self, device=None):
         """
@@ -298,8 +301,6 @@ class msg_device(device):
                 names,
                 device)
 
-        for key, val in change.items():
-            self.IDMessage(f"Setting {key} to {val}")
 
         if "CONNECT" in change:
             if change["CONNECT"] == "On":
@@ -339,10 +340,9 @@ class msg_device(device):
         do_what, with_what = names.split('_', 1)
         self.IDMessage(names)
         if do_what == "subscribe":
-            self.IDMessage(f"Attempting to subscibe to {with_what}")
+            self.IDMessage(f"Attempting to subscribe to {with_what}")
             if with_what not in \
                     self.msg_client.server_info['subscribed']:
-                self.IDMessage(f"Subscribing to {with_what}")
                 self.msg_client.subscribe(
                         with_what,
                         lambda value: self.sub_callback(with_what, value)
@@ -360,7 +360,6 @@ class msg_device(device):
             self.IDMessage("Not valid {do_what}")
 
     def sub_callback(self, name, value):
-        self.IDMessage(f"Setting {name} to {value}")
         vec = self.IUFind(name)
         vec[name] = value[0]
         self.IDSet(vec)
@@ -374,10 +373,9 @@ class msg_device(device):
 
         hds = self._handlers['subscriptions']
         for item in self.msg_client.server_info["published"]:
-            logging.debug("onto item {item}")
+            mlogger.debug("onto item {item}")
             if item in hds.keys():
 
-                self.IDMessage(f"SUBSCRIBING TO {item}")
 
                 # I am not going to lie. The next line of code
                 # should be sent back to hell from whence it
@@ -446,7 +444,7 @@ class msg_device(device):
                     [get_switch, sub_switch]
                     )
             self.IDDef(button_vector)
-        logging.debug("Finished building properties")
+        mlogger.debug("Finished building properties")
 
     @device.repeat(1000)
     async def idle_tasks(self):

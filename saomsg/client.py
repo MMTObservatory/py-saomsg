@@ -4,7 +4,9 @@ from dataclasses import dataclass
 import typing
 import logging
 
-
+clogger = logging.getLogger("msg-client-logger")
+clogger.setLevel(logging.DEBUG)
+clogger.addHandler(logging.FileHandler(filename="client.log", mode='w'))
 # Give some structure to the
 # MSG string responses. This
 # might be overengineering but
@@ -79,7 +81,7 @@ class MSGClient(object):
         Opens the connection to the MSG server as a pair of asyncio streams.
         Run lst after opening to populate self.server_info.
         """
-        logging.debug("Opening connection")
+        clogger.debug("Opening connection")
         try:
             self.reader, self.writer = await asyncio.open_connection(
                 self.host,
@@ -88,7 +90,7 @@ class MSGClient(object):
         except Exception as e:
             msg = f"Error connecting to MSG server at\
                     {self.host}:{self.port}: {e}"
-            logging.error(msg)
+            clogger.error(msg)
             self.running = False
             return False
         self.running = True
@@ -100,9 +102,9 @@ class MSGClient(object):
         Closes the connection to the MSG server
         """
         if not self.running:
-            logging.warn("Connection already closed")
+            clogger.warn("Connection already closed")
         else:
-            logging.debug("Closing connection")
+            clogger.debug("Closing connection")
             self.writer.close()
             await self.writer.wait_closed()
         self.running = False
@@ -118,7 +120,7 @@ class MSGClient(object):
         await self.writer.drain()
 
         rawdata = await self.reader.readline()
-        logging.debug(f'Received: {rawdata.decode()!r}')
+        clogger.debug(f'Received: {rawdata.decode()!r}')
         data = rawdata.decode().split()
         return data
 
@@ -138,16 +140,16 @@ class MSGClient(object):
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
             if len(data) == 2:
-                logging.debug(f"Returned empty result for {param}")
+                clogger.debug(f"Returned empty result for {param}")
                 value = None
             if len(data) == 3:
                 value = data[2]
-                logging.debug(f"Got {param} = {value}")
+                clogger.debug(f"Got {param} = {value}")
             else:
                 value = " ".join(data[2:])
-                logging.debug(f"Got {param} = {value}")
+                clogger.debug(f"Got {param} = {value}")
         else:
-            logging.debug(f"Failed to get {param} from MSG server")
+            clogger.debug(f"Failed to get {param} from MSG server")
             value = None
         return value
 
@@ -174,9 +176,9 @@ class MSGClient(object):
 
         if int(data[0]) == 1 and data[1] == "ack":
             value = True
-            logging.debug(f"Successfully ran {command} with params {params}")
+            clogger.debug(f"Successfully ran {command} with params {params}")
         else:
-            logging.debug(f"Failed to run {command} with params\
+            clogger.debug(f"Failed to run {command} with params\
                     {params} on MSG server")
             value = False
         return value
@@ -208,7 +210,6 @@ class MSGClient(object):
                     var = line.split()[1]
                     self.server_info['registered'].append(var)
 
-
 # Subscriber class
 class Subscriber(MSGClient):
     """
@@ -224,12 +225,16 @@ class Subscriber(MSGClient):
     MAXID = 100000
 
     async def open(self):
-        await super().open()
-        self.server_info['subscribed'] = {}
-        self.callbacks = {}
-        self.tasks = []
-        self.outstanding_replies = {}
-        self.nextid = 1
+        
+        isOpen = await super().open()
+        if isOpen:
+            self.server_info['subscribed'] = {}
+            self.callbacks = {}
+            self.tasks = []
+            self.outstanding_replies = {}
+            self.nextid = 1
+        
+        return isOpen
 
     def subscribe(self, param, callback=None):
 
@@ -250,7 +255,7 @@ class Subscriber(MSGClient):
         if param not in self.server_info['subscribed']:
             self.server_info['subscribed'][param] = None
             if callback is not None:
-
+                clogger.debug(f"subscribing to {param} fxn={callback}")
                 self.callbacks[param] = callback
 
             self.writer.write(f"{msgid} sub {param}\n".encode())
@@ -265,6 +270,7 @@ class Subscriber(MSGClient):
     async def mainloop(self, timeout=None):
         """ Read and handle data from msg server.
         """
+        self.msg_debug_queue = asyncio.Queue()
 
         if not self.running:
             raise RuntimeError("Must call open() before mainloop()")
@@ -272,17 +278,16 @@ class Subscriber(MSGClient):
         rawdata = b''
 
         while self.running:
-            logging.debug("reading data")
             try:
                 rawdata += await asyncio.wait_for(self.reader.read(1), 5.0)
 
             except asyncio.TimeoutError:
                 # Give us a chance to check the loop.
-                logging.debug("timeout")
+                clogger.debug("timeout")
                 continue
 
             except Exception as error:
-                logging.warn(f"We have a read error: {[error]}")
+                clogger.warn(f"We have a read error: {[error]}")
                 raise error
 
             data = rawdata.decode()
@@ -292,20 +297,25 @@ class Subscriber(MSGClient):
             else:
                 continue
 
-            logging.debug(f"raw data is {data}")
             self.last_data = data
             acknak = msg_factory(data)
+            try:
+                self.msg_debug_queue.put_nowait((data, acknak))
+            except asyncio.QueueEmpty as error:
+                pass
+
+
 
             # SET is used for subscribed parameters.
             if type(acknak) is SET:
                 self.server_info['subscribed'][acknak.param] =\
                         " ".join(acknak.value)
-                logging.debug(f"We have a subscribed acknack {acknak.param}")
+                clogger.debug(f"We have a subscribed acknack {acknak.param}")
 
                 if acknak.param in self.callbacks:
                     cb = self.callbacks[acknak.param]
                     loop = asyncio.get_running_loop()
-                    logging.debug(
+                    clogger.debug(
                             f"Calling {cb.__name__} ({cb.__doc__})\
                                     with {acknak.param} value {acknak.value}"
                             )
@@ -316,8 +326,8 @@ class Subscriber(MSGClient):
                     else:
                         loop.call_soon(cb, acknak.value)
 
-            # Other msg reads should be from run commands or gets.
-            # Check to see if anyone is waiting for a reply.
+            # Other msg reads should be from run commands, gets.
+            # or sets. Check to see if anyone is waiting for a reply.
             elif acknak.msgid in self.outstanding_replies:
                 aq = self.outstanding_replies[acknak.msgid]
                 if type(acknak) is ACK:
@@ -337,7 +347,7 @@ class Subscriber(MSGClient):
                 # We currently Don't have a means of capturing this
                 # value so it is gracefully ignored. We need to
                 # find a way to capture it and apply the callback.
-                logging.warn(f"gracefully ignoring {acknak}")
+                clogger.warn(f"gracefully ignoring {acknak}")
 
     async def stop(self):
         self.running = False
@@ -372,6 +382,7 @@ class Subscriber(MSGClient):
 
         msg = f"{msgid} {command} {params}\n"
 
+        clogger.debug(msg)
         self.writer.write(msg.encode())
         await self.writer.drain()
 
@@ -381,7 +392,7 @@ class Subscriber(MSGClient):
             resp = await aq.get()
 
         if isinstance(resp, Exception):
-            raise resp
+            raise RuntimeError(f"{str(resp)} msg={msg}")
 
         return resp
 
@@ -399,6 +410,21 @@ class Subscriber(MSGClient):
 
         self.outstanding_replies[msgid] = aq
         self.writer.write(f"{msgid} get {param}\n".encode())
+        await self.writer.drain()
+
+        return await aq.get()
+
+    async def set(self, param, value):
+
+        if type(value) != str:
+            raise TypeError("value arg must be of type str not {type(value)}")
+
+        msgid = self.getid()
+
+        aq = asyncio.Queue()
+
+        self.outstanding_replies[msgid] = aq
+        self.writer.write(f"{msgid} set {param} {value}\n".encode())
         await self.writer.drain()
 
         return await aq.get()
