@@ -2,10 +2,7 @@ from pyindi.device import device, stdio
 import logging
 from .client import Subscriber
 import asyncio
-import inspect
 import functools
-import sys
-import traceback
 import os
 from pathlib import Path
 import datetime
@@ -205,8 +202,8 @@ class msg_device(device):
                     self.IDMessage("Connecting to msg_client")
                     await self.msg_client.open()
                     if self.msg_client.running is False:
+                        self.IDMessage("Could not connect to msg server.")
                         raise RuntimeError("Could not connect to msg server.")
-                        self.IDMessage(f"Could not connect to msg server.")
 
                     asyncio.create_task(self.msg_client.mainloop())
                     self.IDMessage("Building property\n")
@@ -301,7 +298,6 @@ class msg_device(device):
                 names,
                 device)
 
-
         if "CONNECT" in change:
             if change["CONNECT"] == "On":
                 self.IDMessage("Connecting to msg server")
@@ -375,7 +371,6 @@ class msg_device(device):
         for item in self.msg_client.server_info["published"]:
             mlogger.debug("onto item {item}")
             if item in hds.keys():
-
 
                 # I am not going to lie. The next line of code
                 # should be sent back to hell from whence it

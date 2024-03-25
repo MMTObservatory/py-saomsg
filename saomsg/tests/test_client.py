@@ -1,13 +1,13 @@
 import pytest
 
-from ..client import MSGClient
+from saomsg.client import MSGClient
 
 
 @pytest.mark.asyncio
 async def test_client():
     c = MSGClient()
     await c.open()
-    assert(c.server_info['name'] == "TESTSRV")
+    assert c.server_info['name'] == "TESTSRV"
     await c.close()
 
 
@@ -16,11 +16,11 @@ async def test_get():
     c = MSGClient()
     await c.open()
     bar = await c.get("bar")
-    assert(bar == "baz")
+    assert bar == "baz"
     fizz = await c.get('fizz')
-    assert(fizz == "")
+    assert fizz == ""
     long_str = await c.get("bazz")
-    assert(long_str == "there once was a man")
+    assert long_str == "there once was a man"
     await c.close()
 
 
@@ -29,11 +29,11 @@ async def test_cmd():
     c = MSGClient()
     await c.open()
     status = await c.run("multiply", 4, 5)
-    assert(status)
+    assert status
     foo = await c.get("foo")
-    assert(int(foo) == 20)
+    assert int(foo) == 20
     status = await c.run("blurb")
-    assert(status)
+    assert status
     await c.close()
 
 
@@ -86,4 +86,4 @@ async def test_noconnection():
     cc = MSGClient(host="localhost", port=6869)
 
     status = await cc.open()
-    assert(not status)
+    assert not status
