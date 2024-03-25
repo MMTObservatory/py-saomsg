@@ -12,6 +12,8 @@ clogger.addHandler(logging.FileHandler(filename="client.log", mode='w'))
 # might be overengineering but
 # I hope it will provide some
 # clarity.
+
+
 @dataclass
 class MSG:
     msgid: typing.Union[int, None]
@@ -102,7 +104,7 @@ class MSGClient(object):
         Closes the connection to the MSG server
         """
         if not self.running:
-            clogger.warn("Connection already closed")
+            clogger.warning("Connection already closed")
         else:
             clogger.debug("Closing connection")
             self.writer.close()
@@ -210,6 +212,7 @@ class MSGClient(object):
                     var = line.split()[1]
                     self.server_info['registered'].append(var)
 
+
 # Subscriber class
 class Subscriber(MSGClient):
     """
@@ -225,7 +228,7 @@ class Subscriber(MSGClient):
     MAXID = 100000
 
     async def open(self):
-        
+
         isOpen = await super().open()
         if isOpen:
             self.server_info['subscribed'] = {}
@@ -233,7 +236,7 @@ class Subscriber(MSGClient):
             self.tasks = []
             self.outstanding_replies = {}
             self.nextid = 1
-        
+
         return isOpen
 
     def subscribe(self, param, callback=None):
@@ -301,10 +304,8 @@ class Subscriber(MSGClient):
             acknak = msg_factory(data)
             try:
                 self.msg_debug_queue.put_nowait((data, acknak))
-            except asyncio.QueueEmpty as error:
+            except asyncio.QueueEmpty:
                 pass
-
-
 
             # SET is used for subscribed parameters.
             if type(acknak) is SET:
@@ -416,8 +417,8 @@ class Subscriber(MSGClient):
 
     async def set(self, param, value):
 
-        if type(value) != str:
-            raise TypeError("value arg must be of type str not {type(value)}")
+        if not isinstance(value, str):
+            raise TypeError(f"value arg must be of type str not {type(value)}")
 
         msgid = self.getid()
 
