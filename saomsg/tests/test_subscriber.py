@@ -7,7 +7,7 @@ from saomsg.client import Subscriber
 async def test_client():
     c = Subscriber()
     await c.open()
-    assert c.server_info['name'] == "TESTSRV"
+    assert c.server_info["name"] == "TESTSRV"
     await c.close()
 
 

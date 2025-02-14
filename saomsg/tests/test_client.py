@@ -7,7 +7,7 @@ from saomsg.client import MSGClient
 async def test_client():
     c = MSGClient()
     await c.open()
-    assert c.server_info['name'] == "TESTSRV"
+    assert c.server_info["name"] == "TESTSRV"
     await c.close()
 
 
@@ -17,7 +17,7 @@ async def test_get():
     await c.open()
     bar = await c.get("bar")
     assert bar == "baz"
-    fizz = await c.get('fizz')
+    fizz = await c.get("fizz")
     assert fizz == ""
     long_str = await c.get("bazz")
     assert long_str == "there once was a man"

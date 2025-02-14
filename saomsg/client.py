@@ -6,7 +6,7 @@ import logging
 
 clogger = logging.getLogger("msg-client-logger")
 clogger.setLevel(logging.DEBUG)
-clogger.addHandler(logging.FileHandler(filename="client.log", mode='w'))
+clogger.addHandler(logging.FileHandler(filename="client.log", mode="w"))
 # Give some structure to the
 # MSG string responses. This
 # might be overengineering but
@@ -53,7 +53,7 @@ def msg_factory(data: str):
         argindex = 1
 
     if Type == "set":
-        msg = SET(msgid, vals[argindex], vals[argindex+1:])
+        msg = SET(msgid, vals[argindex], vals[argindex + 1 :])
 
     elif Type == "ack":
         msg = ACK(msgid, vals[argindex:])
@@ -72,6 +72,7 @@ class MSGClient(object):
     """
     This class implements a very basic interface to the SAO MSG protocol.
     """
+
     def __init__(self, host="localhost", port=6868):
         self.host = host
         self.port = port
@@ -86,8 +87,7 @@ class MSGClient(object):
         clogger.debug("Opening connection")
         try:
             self.reader, self.writer = await asyncio.open_connection(
-                self.host,
-                self.port
+                self.host, self.port
             )
         except Exception as e:
             msg = f"Error connecting to MSG server at\
@@ -122,7 +122,7 @@ class MSGClient(object):
         await self.writer.drain()
 
         rawdata = await self.reader.readline()
-        clogger.debug(f'Received: {rawdata.decode()!r}')
+        clogger.debug(f"Received: {rawdata.decode()!r}")
         data = rawdata.decode().split()
         return data
 
@@ -134,7 +134,7 @@ class MSGClient(object):
         if not self.running:
             errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
-        if param not in self.server_info['published']:
+        if param not in self.server_info["published"]:
             errmsg = f"{param} not published by MSG server\
                     {self.server_info['name']}"
             raise ValueError(errmsg)
@@ -164,7 +164,7 @@ class MSGClient(object):
         if not self.running:
             errmsg = "MSG server not currently connected."
             raise ValueError(errmsg)
-        if command not in self.server_info['registered']:
+        if command not in self.server_info["registered"]:
             errmsg = f"{command} not registered by MSG\
                     server {self.server_info['name']}"
             raise ValueError(errmsg)
@@ -180,8 +180,10 @@ class MSGClient(object):
             value = True
             clogger.debug(f"Successfully ran {command} with params {params}")
         else:
-            clogger.debug(f"Failed to run {command} with params\
-                    {params} on MSG server")
+            clogger.debug(
+                f"Failed to run {command} with params\
+                    {params} on MSG server"
+            )
             value = False
         return value
 
@@ -195,22 +197,22 @@ class MSGClient(object):
         msg = "1 lst\n"
         data = await self._writemsg(msg)
         if int(data[0]) == 1 and data[1] == "ack":
-            self.server_info['published'] = list()
-            self.server_info['registered'] = list()
+            self.server_info["published"] = list()
+            self.server_info["registered"] = list()
 
             while True:
                 rawdata = await self.reader.readline()
                 line = rawdata.decode()
                 if "----LIST----" in line:
                     break
-                if 'server' in line:
-                    self.server_info['name'] = line.split()[1]
-                if 'published' in line:
+                if "server" in line:
+                    self.server_info["name"] = line.split()[1]
+                if "published" in line:
                     var = line.split()[1]
-                    self.server_info['published'].append(var)
-                if 'registered' in line:
+                    self.server_info["published"].append(var)
+                if "registered" in line:
                     var = line.split()[1]
-                    self.server_info['registered'].append(var)
+                    self.server_info["registered"].append(var)
 
 
 # Subscriber class
@@ -231,7 +233,7 @@ class Subscriber(MSGClient):
 
         isOpen = await super().open()
         if isOpen:
-            self.server_info['subscribed'] = {}
+            self.server_info["subscribed"] = {}
             self.callbacks = {}
             self.tasks = []
             self.outstanding_replies = {}
@@ -240,23 +242,22 @@ class Subscriber(MSGClient):
         return isOpen
 
     def subscribe(self, param, callback=None):
-
         """Subscribe to a msg variable with optional callback. The
         callback should be a coroutine that excepts the value of
         the variable as its only argument. The Callback should not
         be CPU intensive or we will bog down the mainloop. If we
         want to do CPU bound stuff we will need to come up with a
-        way to run the callbacks in the executor. """
+        way to run the callbacks in the executor."""
 
         msgid = self.getid()
 
-        if param not in self.server_info['published']:
+        if param not in self.server_info["published"]:
             errmsg = f"{param} not published by MSG\
                     server {self.server_info['name']}"
             raise ValueError(errmsg)
 
-        if param not in self.server_info['subscribed']:
-            self.server_info['subscribed'][param] = None
+        if param not in self.server_info["subscribed"]:
+            self.server_info["subscribed"][param] = None
             if callback is not None:
                 clogger.debug(f"subscribing to {param} fxn={callback}")
                 self.callbacks[param] = callback
@@ -265,20 +266,19 @@ class Subscriber(MSGClient):
 
     def unsubscribe(self, param):
 
-        if param in self.server_info['subscribed']:
+        if param in self.server_info["subscribed"]:
             msgid = self.getid()
-            del self.server_info['subscribed']
+            del self.server_info["subscribed"]
             self.writer.write(f"{msgid} uns {param}\n".encode())
 
     async def mainloop(self, timeout=None):
-        """ Read and handle data from msg server.
-        """
+        """Read and handle data from msg server."""
         self.msg_debug_queue = asyncio.Queue()
 
         if not self.running:
             raise RuntimeError("Must call open() before mainloop()")
 
-        rawdata = b''
+        rawdata = b""
 
         while self.running:
             try:
@@ -295,7 +295,7 @@ class Subscriber(MSGClient):
 
             data = rawdata.decode()
 
-            if rawdata.endswith(b'\n'):
+            if rawdata.endswith(b"\n"):
                 rawdata = b""
             else:
                 continue
@@ -309,17 +309,16 @@ class Subscriber(MSGClient):
 
             # SET is used for subscribed parameters.
             if type(acknak) is SET:
-                self.server_info['subscribed'][acknak.param] =\
-                        " ".join(acknak.value)
+                self.server_info["subscribed"][acknak.param] = " ".join(acknak.value)
                 clogger.debug(f"We have a subscribed acknack {acknak.param}")
 
                 if acknak.param in self.callbacks:
                     cb = self.callbacks[acknak.param]
                     loop = asyncio.get_running_loop()
                     clogger.debug(
-                            f"Calling {cb.__name__} ({cb.__doc__})\
+                        f"Calling {cb.__name__} ({cb.__doc__})\
                                     with {acknak.param} value {acknak.value}"
-                            )
+                    )
                     if inspect.iscoroutinefunction(cb):
                         task = loop.create_task(cb(*acknak.value))
                         self.tasks.append(task)
@@ -366,11 +365,9 @@ class Subscriber(MSGClient):
 
         if type(timeout) not in (float, int):
             if timeout is not None:
-                raise ValueError(
-                        f"timeout must be float or int. Not {type(timeout)}"
-                        )
+                raise ValueError(f"timeout must be float or int. Not {type(timeout)}")
 
-        if command not in self.server_info['registered']:
+        if command not in self.server_info["registered"]:
             errmsg = f"{command} not registered by MSG\
                     server {self.server_info['name']}"
             raise ValueError(errmsg)
@@ -432,7 +429,6 @@ class Subscriber(MSGClient):
 
 
 class SubscriberSingleton:
-
     """For most uses we probably will only ever need one
     instance of a client per msg server. This will
     instantiate a Subscriber if none exist for
