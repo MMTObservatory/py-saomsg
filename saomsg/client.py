@@ -53,7 +53,7 @@ def msg_factory(data: str):
         argindex = 1
 
     if Type == "set":
-        msg = SET(msgid, vals[argindex], vals[argindex + 1 :])
+        msg = SET(msgid, vals[argindex], vals[(argindex + 1):])
 
     elif Type == "ack":
         msg = ACK(msgid, vals[argindex:])
