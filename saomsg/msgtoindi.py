@@ -10,7 +10,7 @@ import time
 
 
 mlogger = logging.getLogger("msgtoindi-logger")
-mlogger.addHandler(logging.FileHandler(filename="msgtoindi.log", mode='w'))
+mlogger.addHandler(logging.FileHandler(filename="msgtoindi.log", mode="w"))
 
 INDI_LOG_PATH = os.environ.get("INDI_LOG_PATH")
 if INDI_LOG_PATH:
@@ -19,13 +19,14 @@ if INDI_LOG_PATH:
     log_path = Path(INDI_LOG_PATH)
     logging.basicConfig(
         format="%(asctime)-15s %(message)s",
-        filename=log_path/f'{timestr}.log',
-        level=logging.DEBUG
+        filename=log_path / f"{timestr}.log",
+        level=logging.DEBUG,
     )
 
 
 class wrapper:
-    """This class contains the method wrapper que.
+    """
+    This class contains the method wrapper que.
     when a msg_device method is decorated with a
     classmethod, defined here, the method is sent
     to a que for processing by the msg_device
@@ -36,9 +37,9 @@ class wrapper:
 
     def __init__(self):
         raise NotImplementedError(
-                "There is no reason to instantiate this class.\
+            "There is no reason to instantiate this class.\
                         It is used as a namespace"
-                )
+        )
 
     @classmethod
     def subscribe(cls, device, *items):
@@ -49,7 +50,8 @@ class wrapper:
         """
 
         def handle_fxn(fxn):
-            cls.que.put_nowait(('sub', fxn, items))
+            cls.que.put_nowait(("sub", fxn, items))
+
         return handle_fxn
 
 
@@ -68,15 +70,13 @@ class msg_device(device):
         self._asynctasks_que = asyncio.Queue()
         self._asynctasks = []
 
-        self._handlers = dict(
-                    subscriptions={}
-                )
+        self._handlers = dict(subscriptions={})
         while 1:
             try:
-                action, fxn,  items = wrapper.que.get_nowait()
-                if action == 'sub':
+                action, fxn, items = wrapper.que.get_nowait()
+                if action == "sub":
                     for item in items:
-                        self._handlers['subscriptions'][item] = fxn
+                        self._handlers["subscriptions"][item] = fxn
 
                 else:
                     raise ValueError(f"action cannot be {action}")
@@ -88,28 +88,28 @@ class msg_device(device):
 
     def handle(self, item, fxn):
 
-        self._handlers['subscriptions'][item] = fxn
+        self._handlers["subscriptions"][item] = fxn
 
-#    async def repeat_queuer(self):
-#        while self.running:
-#            func = await self.repeat_q.get()
-#            try:
-#                if inspect.iscoroutinefunction(func):
-#                    await func(self)
-#                else:
-#                    func(self)
-#
-#            except Exception as error:
-#                self.IDMessage(f"There was an error running {func}: {error}")
-#                # also push it to stderr
-#                sys.stderr.write(
-#                    f"There was an exception the \
-#                    later decorated fxn {func}:")
-#
-#                sys.stderr.write(f"{error}")
-#                sys.stderr.write("See traceback below.")
-#                traceback.print_exc(file=sys.stderr)
-#                sys.stderr.flush()
+    #    async def repeat_queuer(self):
+    #        while self.running:
+    #            func = await self.repeat_q.get()
+    #            try:
+    #                if inspect.iscoroutinefunction(func):
+    #                    await func(self)
+    #                else:
+    #                    func(self)
+    #
+    #            except Exception as error:
+    #                self.IDMessage(f"There was an error running {func}: {error}")
+    #                # also push it to stderr
+    #                sys.stderr.write(
+    #                    f"There was an exception the \
+    #                    later decorated fxn {func}:")
+    #
+    #                sys.stderr.write(f"{error}")
+    #                sys.stderr.write("See traceback below.")
+    #                traceback.print_exc(file=sys.stderr)
+    #                sys.stderr.flush()
 
     def do_it_async(self, coro):
         """
@@ -123,9 +123,7 @@ class msg_device(device):
         """
 
         resp_que = asyncio.Queue()
-        self._asynctasks_que.put_nowait(
-                (coro, resp_que)
-                )
+        self._asynctasks_que.put_nowait((coro, resp_que))
 
         start = time.time()
         while 1:
@@ -136,12 +134,13 @@ class msg_device(device):
                 # 0.1 seconds
                 if (time.time() - start) > 0.1:
                     raise RuntimeError(
-                            f"resp_que did not respond in a\
+                        f"resp_que did not respond in a\
                                     timely manner for {coro}"
-                            )
+                    )
 
     async def run_async(self):
-        """Schedule tasks from do_it_async
+        """
+        Schedule tasks from do_it_async
         and respond with task instance.
         """
         while True:
@@ -150,9 +149,7 @@ class msg_device(device):
             if hasattr(foo, "__iter__"):
                 coro, resp_que = foo
             else:
-                raise RuntimeError(
-                        f"something wrong with asynctasks_que output. {foo}"
-                        )
+                raise RuntimeError(f"something wrong with asynctasks_que output. {foo}")
             task = asyncio.create_task(coro)
             self._asynctasks.append(task)
             await resp_que.put(task)
@@ -165,22 +162,14 @@ class msg_device(device):
                 name="CONNECTION",
                 state="Idle",
                 rule="OneOfMany",
-                perm='rw',
+                perm="rw",
                 label="Connect",
-                group="Main"
+                group="Main",
             ),
             [
-                dict(
-                    name="CONNECT",
-                    label="Connect",
-                    state="Off"
-                ),
-                dict(
-                    name="DISCONNECT",
-                    label="Disconnect",
-                    state="On"
-                )
-            ]
+                dict(name="CONNECT", label="Connect", state="Off"),
+                dict(name="DISCONNECT", label="Disconnect", state="On"),
+            ],
         )
         self.IDDef(vec)
 
@@ -251,7 +240,8 @@ class msg_device(device):
             self.IDSet(button)
 
     async def astart(self):
-        """Start up in async mode
+        """
+        Start up in async mode
         This is a kind of highjacking of the
         pyindi astart method so we can add some
         tasks to the gather function.
@@ -266,7 +256,7 @@ class msg_device(device):
             self.repeat_queuer(),
             self.do_the_getting(),
             self.run_async(),
-            self.startstop()
+            self.startstop(),
         )
         await future
 
@@ -292,18 +282,14 @@ class msg_device(device):
         case we are not actually connecting to a peice of
         hardware, we are connecting to the MSG server.
         """
-        vec, change = self.whats_changed(
-                name,
-                states,
-                names,
-                device)
+        vec, change = self.whats_changed(name, states, names, device)
 
         if "CONNECT" in change:
             if change["CONNECT"] == "On":
                 self.IDMessage("Connecting to msg server")
                 self.startstop_que.put_nowait(True)
-                vec['CONNECT'].value = "On"
-                vec['DISCONNECT'].value = "Off"
+                vec["CONNECT"].value = "On"
+                vec["DISCONNECT"].value = "Off"
                 vec.state = "Ok"
             else:
                 self.startstop_que.put_nowait(False)
@@ -314,14 +300,14 @@ class msg_device(device):
         elif "DISCONNECT" in change:
             if change["DISCONNECT"] == "On":
                 self.startstop_que.put_nowait(False)
-                vec['DISCONNECT'].value = "On"
-                vec['CONNECT'].value = "Off"
+                vec["DISCONNECT"].value = "On"
+                vec["CONNECT"].value = "Off"
                 vec.state = "Idle"
 
             else:
                 self.startstop_que.put_nowait(True)
-                vec['DISCONNECT'].value = "Off"
-                vec['CONNECT'].value = "On"
+                vec["DISCONNECT"].value = "Off"
+                vec["CONNECT"].value = "On"
                 vec.state = "Ok"
 
         self.IDSet(vec)
@@ -333,16 +319,14 @@ class msg_device(device):
             return
 
         names = names[0]
-        do_what, with_what = names.split('_', 1)
+        do_what, with_what = names.split("_", 1)
         self.IDMessage(names)
         if do_what == "subscribe":
             self.IDMessage(f"Attempting to subscribe to {with_what}")
-            if with_what not in \
-                    self.msg_client.server_info['subscribed']:
+            if with_what not in self.msg_client.server_info["subscribed"]:
                 self.msg_client.subscribe(
-                        with_what,
-                        lambda value: self.sub_callback(with_what, value)
-                        )
+                    with_what, lambda value: self.sub_callback(with_what, value)
+                )
                 vec.state = "Ok"
                 vec[names].value = "On"
                 self.IDSet(vec)
@@ -367,7 +351,7 @@ class msg_device(device):
         """
         self.IDMessage("buildProperties called.")
 
-        hds = self._handlers['subscriptions']
+        hds = self._handlers["subscriptions"]
         for item in self.msg_client.server_info["published"]:
             mlogger.debug("onto item {item}")
             if item in hds.keys():
@@ -380,64 +364,43 @@ class msg_device(device):
                     hds[item](self, item, val)
 
                 functools.update_wrapper(fxn, hds[item])
-                self.msg_client.subscribe(
-                        item,
-                        fxn
-                        )
+                self.msg_client.subscribe(item, fxn)
 
             # build default get and subscribe stuff.
             value_def = dict(
-                    device=self._devname,
-                    name=item,
-                    label=item,
-                    group="published",
-                    perm='ro',
-                    state="Idle",
-                    timeout="0",
-                    )
+                device=self._devname,
+                name=item,
+                label=item,
+                group="published",
+                perm="ro",
+                state="Idle",
+                timeout="0",
+            )
 
-            value_prop = dict(
-                    name=item,
-                    label=item,
-                    value=""
-                    )
+            value_prop = dict(name=item, label=item, value="")
 
-            value_vector = self.vectorFactory(
-                    "defTextVector",
-                    value_def,
-                    [value_prop]
-                    )
+            value_vector = self.vectorFactory("defTextVector", value_def, [value_prop])
 
             self.IDDef(value_vector)
 
             button_def = dict(
-                    device=self._devname,
-                    name=f"{item}_getorsub",
-                    label=item,
-                    group="buttons",
-                    perm='rw',
-                    state="Idle",
-                    rule="OneOfMany",
-                    timeout="0",
-                    )
+                device=self._devname,
+                name=f"{item}_getorsub",
+                label=item,
+                group="buttons",
+                perm="rw",
+                state="Idle",
+                rule="OneOfMany",
+                timeout="0",
+            )
 
-            get_switch = dict(
-                    name=f"get_{item}",
-                    label="get",
-                    value=""
-                    )
+            get_switch = dict(name=f"get_{item}", label="get", value="")
 
-            sub_switch = dict(
-                    name=f"subscribe_{item}",
-                    label="Subscribe",
-                    value=""
-                    )
+            sub_switch = dict(name=f"subscribe_{item}", label="Subscribe", value="")
 
             button_vector = self.vectorFactory(
-                    "defSwitchVector",
-                    button_def,
-                    [get_switch, sub_switch]
-                    )
+                "defSwitchVector", button_def, [get_switch, sub_switch]
+            )
             self.IDDef(button_vector)
         mlogger.debug("Finished building properties")
 
