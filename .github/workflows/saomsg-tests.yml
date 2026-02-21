@@ -6,10 +6,6 @@ name: Python Tests
 
 on:
   push:
-    branches:
-      - '*'
-    tags:
-      - '*'
   schedule:
     # run every Monday at 6am UTC
     - cron: '0 6 * * 1'
