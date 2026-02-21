@@ -7,7 +7,7 @@ authors = [
 license = {file = "licenses/LICENSE.rst"}
 readme = "README.rst"
 description = "Python interface to SAO MSG protocol"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "astropy",
     "pyindi@git+https://github.com/MMTObservatory/pyINDI"
@@ -16,7 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest-asyncio",
-    "pytest-astropy",
+    "tox",
 ]
 docs = [
     "sphinx-astropy",
@@ -48,12 +48,8 @@ minversion = 7.0
 testpaths = [
     "saomsg/test",
 ]
-astropy_header = true
-doctest_plus = "enabled"
-text_file_format = "rst"
 addopts = [
     "--color=yes",
-    "--doctest-rst",
 ]
 xfail_strict = true
 filterwarnings = [
@@ -68,12 +64,8 @@ filterwarnings = [
 
     [tool.coverage.run]
         omit = [
-            "saomsg/_astropy_init*",
-            "saomsg/conftest.py",
             "saomsg/tests/*",
             "saomsg/version*",
-            "*/saomsg/_astropy_init*",
-            "*/saomsg/conftest.py",
             "*/saomsg/tests/*",
             "*/saomsg/version*",
         ]
