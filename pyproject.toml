@@ -16,6 +16,8 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest-asyncio",
+    "pytest-cov",
+    "pytest-remotedata",
     "tox",
 ]
 docs = [
